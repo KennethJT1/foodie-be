@@ -1,0 +1,40 @@
+{
+  "name": "kjt-foodie-api",
+  "version": "1.0.0",
+  "description": "KJT Foodie backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
+    "db:seed": "sequelize-cli db:seed:all"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KennethJT1/foodie-be.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/KennethJT1/foodie-be/issues"
+  },
+  "homepage": "https://github.com/KennethJT1/foodie-be#readme",
+  "dependencies": {
+    "cloudinary": "^2.11.0",
+    "dotenv": "^18.0.9",
+    "express": "^4.22.3",
+    "mysql2": "^3.24.6",                                                                                                                                                                                                                                                                                                                                                                                        
+    "sequelize": "^6.37.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "sequelize-cli": "^6.6.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
