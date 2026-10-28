@@ -1,0 +1,783 @@
+{
+  "_about": "Real photographs (no illustrations, emoji or AI images) for the KJT Foodie seeder. All from Wikimedia Commons; every URL was checked to return a JPEG. Licences are CC0, public domain, CC BY or CC BY-SA: store the credit with each image and show it where the photo is displayed in full (food detail page). Download each file once and re-upload it to our own storage (POST /uploads pipeline) instead of hot-linking Wikimedia in production.",
+  "dishes": {
+    "Party jollof rice": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/A_Nigeria_Jollof_Rice_with_chicken.jpg/1280px-A_Nigeria_Jollof_Rice_with_chicken.jpg",
+        "credit": {
+          "author": "Ei'eke",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:A_Nigeria_Jollof_Rice_with_chicken.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Jollof_rice_and_plantain.jpg/1280px-Jollof_rice_and_plantain.jpg",
+        "credit": {
+          "author": "Lyndadelz",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Jollof_rice_and_plantain.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6a/Nigerian_Jollof_rice_%40Tyap_Wiki_Zaria_Outreach.jpg/1280px-Nigerian_Jollof_rice_%40Tyap_Wiki_Zaria_Outreach.jpg",
+        "credit": {
+          "author": "Kambai Akau",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Nigerian_Jollof_rice_@Tyap_Wiki_Zaria_Outreach.jpg"
+        }
+      }
+    ],
+    "Fried rice and chicken": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/48/Fried_Rice%2C_Jolof_Rice_with_Plantain_and_Chicken.jpg/1280px-Fried_Rice%2C_Jolof_Rice_with_Plantain_and_Chicken.jpg",
+        "credit": {
+          "author": "Koutchika Lihouenou Gaspard",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Fried_Rice,_Jolof_Rice_with_Plantain_and_Chicken.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/Fried_Rice%2C_Jollof_rice_and_salad%2C_served_with_Grilled_Chicken.jpg/1280px-Fried_Rice%2C_Jollof_rice_and_salad%2C_served_with_Grilled_Chicken.jpg",
+        "credit": {
+          "author": "Justdifference",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Fried_Rice,_Jollof_rice_and_salad,_served_with_Grilled_Chicken.jpg"
+        }
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Fried_rice%2C_baked_beans_with_fried_plantains_and_chicken.jpg/960px-Fried_rice%2C_baked_beans_with_fried_plantains_and_chicken.jpg",
+        "credit": {
+          "author": "Endee n",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Fried_rice,_baked_beans_with_fried_plantains_and_chicken.jpg"
+        }
+      }
+    ],
+    "Ofada rice and ayamase": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/85/Ofada_Rice.jpg/1280px-Ofada_Rice.jpg",
+        "credit": {
+          "author": "Ijeoma",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Ofada_Rice.jpg"
+        }
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Ofada_Rice_and_stew_on_leaf.jpg/960px-Ofada_Rice_and_stew_on_leaf.jpg",
+        "credit": {
+          "author": "Bukky658",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Ofada_Rice_and_stew_on_leaf.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Unpolished_local_rice_and_stew_%28_Nigerian_cuisine%29.jpg/1280px-Unpolished_local_rice_and_stew_%28_Nigerian_cuisine%29.jpg",
+        "credit": {
+          "author": "Beendy234",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Unpolished_local_rice_and_stew_(_Nigerian_cuisine).jpg"
+        }
+      }
+    ],
+    "Coconut rice": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/COCONUT_RICE_AND_SALAD.jpg/960px-COCONUT_RICE_AND_SALAD.jpg",
+        "credit": {
+          "author": "Oghenevwogaga Amos",
+          "license": "CC BY 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:COCONUT_RICE_AND_SALAD.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Coconut_rice_with_crispies.jpg/1280px-Coconut_rice_with_crispies.jpg",
+        "credit": {
+          "author": "Lakshmibsriram",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Coconut_rice_with_crispies.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Coconut_Rice_-_Easythaiger_2026-04-21.jpg/1280px-Coconut_Rice_-_Easythaiger_2026-04-21.jpg",
+        "credit": {
+          "author": "Andy Li",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Coconut_Rice_-_Easythaiger_2026-04-21.jpg"
+        }
+      }
+    ],
+    "Amala and ewedu": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Amala_and_Ewedu_Soup_19_04.jpg/1280px-Amala_and_Ewedu_Soup_19_04.jpg",
+        "credit": {
+          "author": "Lord Ajax 001",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Amala_and_Ewedu_Soup_19_04.jpg"
+        }
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Amala_and_Ewedu_with_fish_and_pomo_stew_and_zobo.jpg/960px-Amala_and_Ewedu_with_fish_and_pomo_stew_and_zobo.jpg",
+        "credit": {
+          "author": "Halima Waziri",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Amala_and_Ewedu_with_fish_and_pomo_stew_and_zobo.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/Amala_and_ewedu.jpg/1280px-Amala_and_ewedu.jpg",
+        "credit": {
+          "author": "Stephanie cheks",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Amala_and_ewedu.jpg"
+        }
+      }
+    ],
+    "Pounded yam and egusi": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Egusi_soup_with_pounded_yam_and_assorted_meats.jpg/960px-Egusi_soup_with_pounded_yam_and_assorted_meats.jpg",
+        "credit": {
+          "author": "Onyenachi64",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Egusi_soup_with_pounded_yam_and_assorted_meats.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Pounded_Yam_and_Egusi_Soup.jpg/1280px-Pounded_Yam_and_Egusi_Soup.jpg",
+        "credit": {
+          "author": "Justdifference",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Pounded_Yam_and_Egusi_Soup.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/EGUSI_SOUP_AND_POUNDED_YAM.JPG/1280px-EGUSI_SOUP_AND_POUNDED_YAM.JPG",
+        "credit": {
+          "author": "Ask4ugo",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:EGUSI_SOUP_AND_POUNDED_YAM.JPG"
+        }
+      }
+    ],
+    "Eba and okra soup": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Okra_soup_with_stew.jpg/1280px-Okra_soup_with_stew.jpg",
+        "credit": {
+          "author": "Linason Blessing",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Okra_soup_with_stew.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/34/Okra_soup%2C_melon_soup_and_catfish_stew.jpg/1280px-Okra_soup%2C_melon_soup_and_catfish_stew.jpg",
+        "credit": {
+          "author": "Joan Onanyo",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Okra_soup,_melon_soup_and_catfish_stew.jpg"
+        }
+      }
+    ],
+    "Semo and afang soup": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/Afang_Soup.jpg/1280px-Afang_Soup.jpg",
+        "credit": {
+          "author": "Yemisi Ogbe",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Afang_Soup.jpg"
+        }
+      }
+    ],
+    "Fufu and oha soup": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Soup_and_swallow_%28_Oha_soup_and_swallow%29.jpg/1280px-Soup_and_swallow_%28_Oha_soup_and_swallow%29.jpg",
+        "credit": {
+          "author": "Beendy234",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Soup_and_swallow_(_Oha_soup_and_swallow).jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Native_Ufa_Soup%22OHA_SOUP%22.jpg/1280px-Native_Ufa_Soup%22OHA_SOUP%22.jpg",
+        "credit": {
+          "author": "Ozims Divine",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Native_Ufa_Soup%22OHA_SOUP%22.jpg"
+        }
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/%E1%BB%8Cha_Soup_and_Garri.jpg/960px-%E1%BB%8Cha_Soup_and_Garri.jpg",
+        "credit": {
+          "author": "Iwuala Lucy",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:%E1%BB%8Cha_Soup_and_Garri.jpg"
+        }
+      }
+    ],
+    "Beef suya": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/Suya_with_pepper_sauce.jpg/1280px-Suya_with_pepper_sauce.jpg",
+        "credit": {
+          "author": "Bukky658",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Suya_with_pepper_sauce.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/SuyavarietiesTX.JPG/1280px-SuyavarietiesTX.JPG",
+        "credit": {
+          "author": "WhisperToMe",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:SuyavarietiesTX.JPG"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Suya_preparation_for_grilling_5.jpg/1280px-Suya_preparation_for_grilling_5.jpg",
+        "credit": {
+          "author": "Kambai Akau",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Suya_preparation_for_grilling_5.jpg"
+        }
+      }
+    ],
+    "Chicken suya": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Suya_chicken_meat.jpg/960px-Suya_chicken_meat.jpg",
+        "credit": {
+          "author": "MOIBARDE",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Suya_chicken_meat.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Chicken_Grills_%28Suya%29_in_Northern_Nigeria_%288%29.jpg/1280px-Chicken_Grills_%28Suya%29_in_Northern_Nigeria_%288%29.jpg",
+        "credit": {
+          "author": "Zarerh",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chicken_Grills_(Suya)_in_Northern_Nigeria_(8).jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Chicken_suya_also_known_as_kebab.jpg/1280px-Chicken_suya_also_known_as_kebab.jpg",
+        "credit": {
+          "author": "Nakandealiyu",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chicken_suya_also_known_as_kebab.jpg"
+        }
+      }
+    ],
+    "Asun": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Goat_meat_Asun.jpg/960px-Goat_meat_Asun.jpg",
+        "credit": {
+          "author": "Edriiic",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Goat_meat_Asun.jpg"
+        }
+      },
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Fried_goat_meat.jpg/960px-Fried_goat_meat.jpg",
+        "credit": {
+          "author": "Edithobayaa1",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Fried_goat_meat.jpg"
+        }
+      }
+    ],
+    "Grilled catfish": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Grilled_Catfish.jpg/1280px-Grilled_Catfish.jpg",
+        "credit": {
+          "author": "Stefan Rohner",
+          "license": "CC BY-SA 3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Grilled_Catfish.jpg"
+        }
+      }
+    ],
+    "Small chops platter": [
+      {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Small_chops_in_a_tray.jpg/960px-Small_chops_in_a_tray.jpg",
+        "credit": {
+          "author": "James Moore200",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Small_chops_in_a_tray.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/A_box_of_small_chops.jpg/1280px-A_box_of_small_chops.jpg",
+        "credit": {
+          "author": "Maame1Yaa",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:A_box_of_small_chops.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/SmallChops.jpg/1280px-SmallChops.jpg",
+        "credit": {
+          "author": "Nimah salihu",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:SmallChops.jpg"
+        }
+      }
+    ],
+    "Puff-puff": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Puff_Puff.jpg/1280px-Puff_Puff.jpg",
+        "credit": {
+          "author": "Halima Waziri",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Puff_Puff.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Puff_puff_for_sell.jpg/1280px-Puff_puff_for_sell.jpg",
+        "credit": {
+          "author": "TopmanJnr1",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Puff_puff_for_sell.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Puff_Puff_Making_series_6.jpg/1280px-Puff_Puff_Making_series_6.jpg",
+        "credit": {
+          "author": "Dappasolomon001",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Puff_Puff_Making_series_6.jpg"
+        }
+      }
+    ],
+    "Peppered gizzard": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Peppered_gizzards.jpg/1280px-Peppered_gizzards.jpg",
+        "credit": {
+          "author": "Xtacywura",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Peppered_gizzards.jpg"
+        }
+      }
+    ],
+    "Goat meat pepper soup": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Goat_meat_pepper_soup.jpg/1280px-Goat_meat_pepper_soup.jpg",
+        "credit": {
+          "author": "Iwuala Lucy",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Goat_meat_pepper_soup.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Spicy_Goat_meat_pepper_soup.jpg/1280px-Spicy_Goat_meat_pepper_soup.jpg",
+        "credit": {
+          "author": "Halima Waziri",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Spicy_Goat_meat_pepper_soup.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Goat_meat_pepper_soup_served_with_bread.jpg/1280px-Goat_meat_pepper_soup_served_with_bread.jpg",
+        "credit": {
+          "author": "Nancy Nwachukwu",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Goat_meat_pepper_soup_served_with_bread.jpg"
+        }
+      }
+    ],
+    "Catfish pepper soup": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c3/Catfish_pepper_soup.jpg/1280px-Catfish_pepper_soup.jpg",
+        "credit": {
+          "author": "Rare Grace",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Catfish_pepper_soup.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Native_Catfish_Pepper_soup.jpg/1280px-Native_Catfish_Pepper_soup.jpg",
+        "credit": {
+          "author": "Globalgab",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Native_Catfish_Pepper_soup.jpg"
+        }
+      }
+    ],
+    "Ewa agoyin and bread": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Ewa_agoyin.jpg/1280px-Ewa_agoyin.jpg",
+        "credit": {
+          "author": "Atimukoh",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Ewa_agoyin.jpg"
+        }
+      }
+    ],
+    "Beans and dodo": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Beans_and_plantain_%28African_good%29.jpg/1280px-Beans_and_plantain_%28African_good%29.jpg",
+        "credit": {
+          "author": "Beendy234",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Beans_and_plantain_(African_good).jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Stewed_beans%2C_fried_plantains_and_garri.jpg/1280px-Stewed_beans%2C_fried_plantains_and_garri.jpg",
+        "credit": {
+          "author": "Joan Onanyo",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Stewed_beans,_fried_plantains_and_garri.jpg"
+        }
+      }
+    ],
+    "Moi moi": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Moin_Moin.jpg/1280px-Moin_Moin.jpg",
+        "credit": {
+          "author": "Rka11111",
+          "license": "CC BY-SA 3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Moin_Moin.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/Moimoi_with_boiled_egg.jpg/1280px-Moimoi_with_boiled_egg.jpg",
+        "credit": {
+          "author": "Fatimah Bello",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Moimoi_with_boiled_egg.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Northern_moimoi.jpg/1280px-Northern_moimoi.jpg",
+        "credit": {
+          "author": "Salma kyari",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Northern_moimoi.jpg"
+        }
+      }
+    ],
+    "Akara and pap": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Bean_cake_%28Akara%29.jpg/1280px-Bean_cake_%28Akara%29.jpg",
+        "credit": {
+          "author": "Ceentia",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Bean_cake_(Akara).jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/Frying_of_akara_%28bean_cake%29.jpg/1280px-Frying_of_akara_%28bean_cake%29.jpg",
+        "credit": {
+          "author": "NiferO",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Frying_of_akara_(bean_cake).jpg"
+        }
+      }
+    ],
+    "Yam and egg sauce": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Boiled_yam_and_egg_sauce.jpg/1280px-Boiled_yam_and_egg_sauce.jpg",
+        "credit": {
+          "author": "Sunday Glory",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Boiled_yam_and_egg_sauce.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Egg_sauce_with_boiled_yam.jpg/1280px-Egg_sauce_with_boiled_yam.jpg",
+        "credit": {
+          "author": "QueenSaysay",
+          "license": "CC BY 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Egg_sauce_with_boiled_yam.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Boiled_Yam_with_Egg_Source.jpg/1280px-Boiled_Yam_with_Egg_Source.jpg",
+        "credit": {
+          "author": "Globalgab",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Boiled_Yam_with_Egg_Source.jpg"
+        }
+      }
+    ],
+    "Meat pie": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b2/Meat_pie_and_mashed_potatoes_at_a_pub_in_Dublin.jpg/1280px-Meat_pie_and_mashed_potatoes_at_a_pub_in_Dublin.jpg",
+        "credit": {
+          "author": "Grendelkhan",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Meat_pie_and_mashed_potatoes_at_a_pub_in_Dublin.jpg"
+        }
+      }
+    ],
+    "Chin chin (500 g)": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Chin-chin.jpg/1280px-Chin-chin.jpg",
+        "credit": {
+          "author": "ChildofMidnight at English Wikipedia",
+          "license": "CC BY 3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chin-chin.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/A_fried_chin_chin.jpg/1280px-A_fried_chin_chin.jpg",
+        "credit": {
+          "author": "Linason Blessing",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:A_fried_chin_chin.jpg"
+        }
+      }
+    ],
+    "Zobo (1 L)": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Zobo_drink.jpg/1280px-Zobo_drink.jpg",
+        "credit": {
+          "author": "Lyndadelz",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Zobo_drink.jpg"
+        }
+      }
+    ],
+    "Kunu (1 L)": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f6/Kunu_inside_the_cup.jpg/1280px-Kunu_inside_the_cup.jpg",
+        "credit": {
+          "author": "Zahraswaty",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Kunu_inside_the_cup.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Kunu_in_Northern_Nigeria.jpg/1280px-Kunu_in_Northern_Nigeria.jpg",
+        "credit": {
+          "author": "Zahraswaty",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Kunu_in_Northern_Nigeria.jpg"
+        }
+      }
+    ],
+    "Chapman": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/Chapman_drink.jpg/1280px-Chapman_drink.jpg",
+        "credit": {
+          "author": "secretlondon123",
+          "license": "CC BY-SA 2.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chapman_drink.jpg"
+        }
+      }
+    ],
+    "Seafood okra": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Okro_soup_1.jpg/1280px-Okro_soup_1.jpg",
+        "credit": {
+          "author": "Isaac Gyamfi Essumeng",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Okro_soup_1.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/64/Sumptuous_okro_soup.jpg/1280px-Sumptuous_okro_soup.jpg",
+        "credit": {
+          "author": "QueenSaysay",
+          "license": "CC BY 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Sumptuous_okro_soup.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Okro_Soup_01.jpg/1280px-Okro_Soup_01.jpg",
+        "credit": {
+          "author": "Amuzujoe",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Okro_Soup_01.jpg"
+        }
+      }
+    ],
+    "Peppered snail": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Pepper_snail.jpg/1280px-Pepper_snail.jpg",
+        "credit": {
+          "author": "Iwai-Dialax",
+          "license": "CC BY 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Pepper_snail.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/Peppered_and_Vegetable_Snails.jpg/1280px-Peppered_and_Vegetable_Snails.jpg",
+        "credit": {
+          "author": "Mis3009",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Peppered_and_Vegetable_Snails.jpg"
+        }
+      }
+    ],
+    "Spaghetti jollof": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Jollof_Spaghetti_01.jpg/1280px-Jollof_Spaghetti_01.jpg",
+        "credit": {
+          "author": "Zakaria Tunsung",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Jollof_Spaghetti_01.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f9/Spaghetti_and_macroni_Jollof_a.jpg/1280px-Spaghetti_and_macroni_Jollof_a.jpg",
+        "credit": {
+          "author": "Salma kyari",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Spaghetti_and_macroni_Jollof_a.jpg"
+        }
+      }
+    ],
+    "Chicken shawarma": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Chicken_Shawarma_Wrap_-_Lavash_2024-09-11.jpg/1280px-Chicken_Shawarma_Wrap_-_Lavash_2024-09-11.jpg",
+        "credit": {
+          "author": "Andy Li",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chicken_Shawarma_Wrap_-_Lavash_2024-09-11.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Chicken_Shawarma.jpg/1280px-Chicken_Shawarma.jpg",
+        "credit": {
+          "author": "Zebaarts",
+          "license": "CC BY-SA 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chicken_Shawarma.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/Handmade_Chicken_Shawarma_Wrap_-_Lavash.jpg/1280px-Handmade_Chicken_Shawarma_Wrap_-_Lavash.jpg",
+        "credit": {
+          "author": "Andy Li",
+          "license": "CC0",
+          "source": "https://commons.wikimedia.org/wiki/File:Handmade_Chicken_Shawarma_Wrap_-_Lavash.jpg"
+        }
+      }
+    ],
+    "Chicken and chips": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e5/Chicken_and_chips_%282511190934%29.jpg/1280px-Chicken_and_chips_%282511190934%29.jpg",
+        "credit": {
+          "author": "Father.Jack from Coventry, UK",
+          "license": "CC BY 2.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Chicken_and_chips_(2511190934).jpg"
+        }
+      }
+    ],
+    "Parfait": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Parfait_desert.JPG/1280px-Parfait_desert.JPG",
+        "credit": {
+          "author": "User:Mattes",
+          "license": "Public domain",
+          "source": "https://commons.wikimedia.org/wiki/File:Parfait_desert.JPG"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Parfaits_at_Harvest_Table_-_February_2023_-_Sarah_Stierch.jpg/1280px-Parfaits_at_Harvest_Table_-_February_2023_-_Sarah_Stierch.jpg",
+        "credit": {
+          "author": "Missvain",
+          "license": "CC BY 4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Parfaits_at_Harvest_Table_-_February_2023_-_Sarah_Stierch.jpg"
+        }
+      }
+    ],
+    "Red velvet cake slice": [
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/Red_velvet_cake_slice.jpg/1280px-Red_velvet_cake_slice.jpg",
+        "credit": {
+          "author": "Flickr user ~Twon~ : https://www.flickr.com/photos/twon/",
+          "license": "CC BY 2.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Red_velvet_cake_slice.jpg"
+        }
+      },
+      {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b2/Red_Velvet_Cake_Waldorf_Astoria.jpg/1280px-Red_Velvet_Cake_Waldorf_Astoria.jpg",
+        "credit": {
+          "author": "Hennem08",
+          "license": "CC BY-SA 3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Red_Velvet_Cake_Waldorf_Astoria.jpg"
+        }
+      }
+    ]
+  },
+  "vendorCovers": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Arewa_Traditional_Kitchen.jpg/1280px-Arewa_Traditional_Kitchen.jpg",
+      "credit": {
+        "author": "Arewa Traditional kitchen",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Arewa_Traditional_Kitchen.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Mobile_food_vendor_in_Nigeria.jpg/1280px-Mobile_food_vendor_in_Nigeria.jpg",
+      "credit": {
+        "author": "Beendy234",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Mobile_food_vendor_in_Nigeria.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Street_food_vendor_in_Nigeria.jpg/1280px-Street_food_vendor_in_Nigeria.jpg",
+      "credit": {
+        "author": "Confidence24",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Street_food_vendor_in_Nigeria.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Food_vendor_at_work.jpg/1280px-Food_vendor_at_work.jpg",
+      "credit": {
+        "author": "Adeolu Paul",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Food_vendor_at_work.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Yahuza_Suya_Spot_Yola.jpg/1280px-Yahuza_Suya_Spot_Yola.jpg",
+      "credit": {
+        "author": "Zahabello",
+        "license": "CC BY 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Yahuza_Suya_Spot_Yola.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/SUYA_SPOT_AT_JOS_WILDLIFE_PARK.jpg/1280px-SUYA_SPOT_AT_JOS_WILDLIFE_PARK.jpg",
+      "credit": {
+        "author": "Yusufdavid",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:SUYA_SPOT_AT_JOS_WILDLIFE_PARK.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Suya_and_kilishi_spot_at_Chong_Dovetail_2024_02.jpg/1280px-Suya_and_kilishi_spot_at_Chong_Dovetail_2024_02.jpg",
+      "credit": {
+        "author": "Kambai Akau",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Suya_and_kilishi_spot_at_Chong_Dovetail_2024_02.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Suya_Seller.jpg/1280px-Suya_Seller.jpg",
+      "credit": {
+        "author": "FischerFotos",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Suya_Seller.jpg"
+      }
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Market_-_Ikija%2C_Lagos%2C_Nigeria.jpg/1280px-Market_-_Ikija%2C_Lagos%2C_Nigeria.jpg",
+      "credit": {
+        "author": "Unknown",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Market_-_Ikija,_Lagos,_Nigeria.jpg"
+      }
+    }
+  ],
+  "documentSample": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Legal_Contract_%26_Signature_-_Warm_Tones.jpg/1280px-Legal_Contract_%26_Signature_-_Warm_Tones.jpg",
+      "credit": {
+        "author": "Blogtrepreneur",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Legal_Contract_%26_Signature_-_Warm_Tones.jpg"
+      }
+    }
+  ]
+}

@@ -1,0 +1,3044 @@
+# KJT Foodie API contract — DRAFT v0.1 (frontend copy).
+# The master copy lives in the backend repo. Any change needs agreement from both teams.
+# Covers every endpoint the mock handlers implement (src/mocks/handlers/) as of phase 17,
+# ready to hand to the backend team.
+openapi: 3.1.0
+info:
+  title: KJT Foodie API
+  version: 0.1.0
+  description: |
+    Conventions
+    - Base path `/api/v1`. JSON only. Money is always an integer in **kobo**.
+    - Success envelope `{ success: true, data, meta? }`; error envelope `{ success: false, error }`.
+    - Lists: `page`, `limit` (max 100), `sort` (`-field` = descending, comma for several),
+      `search`, per-field filters (comma = any of, e.g. `status=paid,accepted`), `from` / `to` dates.
+    - Feeds and comments use cursor pagination: `cursor`, `limit` → `meta.nextCursor`.
+    - Access token in `Authorization: Bearer`; refresh token in an httpOnly cookie.
+    - Times are ISO 8601 UTC; the UI shows Africa/Lagos.
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Uploads
+    description: Files (photos, documents) are uploaded first; other endpoints receive the returned URL.
+  - name: Catalogue
+  - name: Social
+  - name: Account
+  - name: Orders
+  - name: Payments
+  - name: Reviews
+  - name: Refunds
+  - name: Onboarding
+    description: Vendor onboarding wizard, documents and bank account checks (FR-VEN-01, BR-PAY-02).
+  - name: Subscriptions
+    description: Plans, free trial, Paystack plan payments, cancel and downgrade (BRD section 4).
+  - name: Vendor
+    description: |
+      The vendor's store: order steps, live queue, menu, sales, engagement, settings and staff.
+      Real time: the vendor dashboard emits `vendor:subscribe` / `vendor:unsubscribe` `{ vendorId }`;
+      the server emits `vendor:order:new` `{ vendorId, orderId, code, total, acceptDeadline }` when a
+      paid order arrives. Orders not accepted by `acceptDeadline` are rejected and refunded (BR-PAY-04).
+  - name: Rider
+    description: |
+      Rider onboarding, going online, job offers, the active delivery, trips and earnings.
+      Real time: while online the app emits `rider:subscribe` / `rider:unsubscribe` `{ riderId }`
+      and `rider:location` `{ riderId, lat, lng, heading }` every 5–10 s; the server emits
+      `rider:job:offer` (a JobOffer) and forwards the position to the customer as `rider:location`.
+  - name: Admin
+    description: |
+      Admin dashboard. Each endpoint needs the named permission (`x-permission`); the server
+      re-checks it. Live map: the client emits `admin:live-map:subscribe` / `:unsubscribe`; the
+      server pushes a LiveMap snapshot as `admin:live-map` every few seconds.
+  - name: Support
+    description: |
+      Help tickets for customers, vendors and riders, and customer–rider chat during a delivery.
+      Chat in real time: the server emits `chat:message` `{ id, orderId, senderRole, senderName, body, createdAt }`.
+  - name: Notifications
+    description: |
+      In-app list over REST. Real time over Socket.IO: the client emits `order:subscribe` /
+      `order:unsubscribe` `{ orderId }`; the server emits `order:status`
+      `{ orderId, status, statusHistory, updatedAt, rider?, delivery? }` and `rider:location`
+      `{ orderId, riderId, lat, lng, heading, etaMins, at }`.
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      security: []
+      summary: Liveness check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          status: { type: string, example: ok }
+                          time: { type: string, format: date-time }
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Sign up as a customer, vendor or rider (admins are created by a super admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, firstName, lastName, phone, password]
+              properties:
+                role: { type: string, enum: [customer, vendor, rider] }
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string, format: email }
+                phone: { type: string, example: '+2348031234567' }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201':
+          description: Account created; an OTP is sent to the phone
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          otpRequestId: { type: string }
+                          phone: { type: string }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Log in with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/otp/request:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Send a login OTP by SMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string }
+                purpose: { type: string, enum: [login, verify, reset] }
+      responses:
+        '200':
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          otpRequestId: { type: string }
+                          expiresInSec: { type: integer, example: 300 }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Verify an OTP and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: { type: string }
+                code: { type: string, pattern: '^\d{6}$' }
+                purpose: { type: string, enum: [login, verify, reset] }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Sign in or sign up (as a customer) with a Google ID token (FR-ACC-05)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: string, description: ID token from Google Identity Services }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { description: The Google token is invalid or expired }
+        '403': { description: Account banned or suspended }
+
+  /uploads:
+    post:
+      tags: [Uploads]
+      summary: Upload one image or document; returns the URL to send to other endpoints
+      description: |
+        Images are re-encoded to WebP (food photos max 1600 px wide, under 2 MB after compression).
+        `purpose` decides who may upload and where it is stored. Documents are private: their URLs
+        are signed and short-lived, and only the owner and admins can read them.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, purpose]
+              properties:
+                file: { type: string, format: binary }
+                purpose:
+                  type: string
+                  enum: [food_photo, vendor_logo, vendor_cover, vendor_document, rider_document, refund_photo, avatar]
+      responses:
+        '201':
+          description: Stored file
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string }
+                          width: { type: integer }
+                          height: { type: integer }
+                          bytes: { type: integer }
+        '413': { description: File too large (max 8 MB before compression) }
+        '422': { description: 'Not a JPG, PNG, WebP or PDF (documents only)' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Rotate the refresh cookie and get a new access token
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: End the session and clear the refresh cookie
+      responses:
+        '204': { description: Logged out }
+
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Send a reset code to the phone or email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identifier: { type: string, description: Email or phone }
+      responses:
+        '200': { description: Always succeeds (no account enumeration) }
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Set a new password with the reset code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, code, password]
+              properties:
+                identifier: { type: string }
+                code: { type: string }
+                password: { type: string, minLength: 8 }
+      responses:
+        '200': { description: Password changed }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me:
+    get:
+      tags: [Auth]
+      summary: The signed-in user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    patch:
+      tags: [Auth]
+      summary: Edit profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string }
+      responses:
+        '200': { description: Updated user }
+    delete:
+      tags: [Auth]
+      summary: Customer deletes their account (personal data removed, orders kept anonymised)
+      responses:
+        '204': { description: Deleted; the refresh cookie is cleared }
+        '403': { description: Only customers can delete their own account here }
+
+  /categories:
+    get:
+      tags: [Catalogue]
+      security: []
+      summary: Food categories
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Category' }
+
+  /feed:
+    get:
+      tags: [Catalogue]
+      security: []
+      summary: Home feed of food posts near a point (cursor pagination)
+      parameters:
+        - { name: lat, in: query, schema: { type: number } }
+        - { name: lng, in: query, schema: { type: number } }
+        - { name: tab, in: query, schema: { type: string, enum: [nearby, popular, newest, following] } }
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/FoodItem' } }
+                  meta: { $ref: '#/components/schemas/CursorMeta' }
+
+  /food-items:
+    get:
+      tags: [Catalogue]
+      security: []
+      summary: Search food items
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: categoryId, in: query, schema: { type: string } }
+        - { name: vendorId, in: query, schema: { type: string } }
+        - { name: minPrice, in: query, description: kobo, schema: { type: integer } }
+        - { name: maxPrice, in: query, description: kobo, schema: { type: integer } }
+        - { name: maxDistanceKm, in: query, schema: { type: number } }
+        - { name: minRating, in: query, schema: { type: number } }
+        - { name: lat, in: query, schema: { type: number } }
+        - { name: lng, in: query, schema: { type: number } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/FoodItem' } }
+
+  /food-items/{id}:
+    get:
+      tags: [Catalogue]
+      security: []
+      summary: One food item with its vendor
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data: { $ref: '#/components/schemas/FoodItem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /vendors/{slug}:
+    get:
+      tags: [Catalogue]
+      security: []
+      summary: Vendor storefront (hidden when the subscription has lapsed, BR-SUB-06)
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Vendor with opening hours and isOpen }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /vendors:
+    get:
+      tags: [Catalogue]
+      security: []
+      summary: Visible vendors (approved with a live plan)
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: city, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Vendor' } }
+
+  /food-items/{id}/likes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Social]
+      summary: Like a food post (customers)
+      responses:
+        '200': { $ref: '#/components/responses/LikeState' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    delete:
+      tags: [Social]
+      summary: Remove a like
+      responses:
+        '200': { $ref: '#/components/responses/LikeState' }
+
+  /me/likes:
+    get:
+      tags: [Social]
+      summary: Food the signed-in customer liked
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/FoodItem' } }
+
+  /food-items/{id}/comments:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Social]
+      security: []
+      summary: Top-level comments (newest first) with vendor replies, cursor paginated
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/Comment' } }
+                  meta: { $ref: '#/components/schemas/CursorMeta' }
+    post:
+      tags: [Social]
+      summary: Comment (customers) or reply to a comment (the dish's vendor, parentId required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 500, description: Plain text }
+                parentId: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/Comment' } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /comments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      tags: [Social]
+      summary: Edit your own comment (sets editedAt)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { body: { type: string, maxLength: 500 } } }
+      responses:
+        '200': { description: Updated comment }
+    delete:
+      tags: [Social]
+      summary: Delete your own comment (shown as "Comment removed")
+      responses:
+        '200': { description: Removed }
+
+  /reports:
+    post:
+      tags: [Social]
+      summary: Report a comment or food post to the moderation queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType: { type: string, enum: [comment, food_item] }
+                targetId: { type: string }
+                reason: { type: string }
+      responses:
+        '201': { description: Report created (or the existing open report) }
+
+  /vendors/{id}/follow:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Social]
+      summary: Follow a vendor (customers)
+      responses:
+        '200': { $ref: '#/components/responses/FollowState' }
+    delete:
+      tags: [Social]
+      summary: Unfollow a vendor
+      responses:
+        '200': { $ref: '#/components/responses/FollowState' }
+
+  /me/follows:
+    get:
+      tags: [Social]
+      summary: Vendors the signed-in customer follows
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Vendor' } }
+
+  /addresses:
+    get:
+      tags: [Account]
+      summary: Saved delivery addresses (default first)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Address' } }
+    post:
+      tags: [Account]
+      summary: Save an address (the first one becomes the default)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AddressInput' } } }
+      responses:
+        '201': { description: Created }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /addresses/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      tags: [Account]
+      summary: Update an address
+      requestBody:
+        content: { application/json: { schema: { $ref: '#/components/schemas/AddressInput' } } }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Account]
+      summary: Delete an address (another becomes default when needed)
+      responses:
+        '200': { description: Deleted }
+
+  /addresses/{id}/default:
+    post:
+      tags: [Account]
+      summary: Make an address the default
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: OK }
+
+  /checkout/quote:
+    post:
+      tags: [Orders]
+      summary: Price a cart on the server (subtotal, delivery fee, processing fee, total, ETA)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutInput' } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/Quote' } }
+        '422':
+          description: >-
+            Cannot be ordered: error.code is VENDOR_CLOSED (schedule for later), VENDOR_PAUSED,
+            OUT_OF_RANGE, ITEM_UNAVAILABLE or EMPTY_CART
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  /payments/initialize:
+    post:
+      tags: [Payments]
+      summary: Start a Paystack transaction for the cart. No order exists yet (FR-ORD-03).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/CheckoutInput'
+                - properties: { deliveryNote: { type: string, maxLength: 200 } }
+      responses:
+        '200':
+          description: Transaction ready for the Paystack popup
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          reference: { type: string }
+                          accessCode: { type: string }
+                          amount: { type: integer, description: kobo }
+                          email: { type: string }
+
+  /payments/verify:
+    post:
+      tags: [Payments]
+      summary: Confirm the payment with the gateway and create the order (idempotent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reference], properties: { reference: { type: string } } }
+      responses:
+        '200':
+          description: Paid; the order is returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          status: { type: string, enum: [success] }
+                          reference: { type: string }
+                          order: { $ref: '#/components/schemas/Order' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /me/payments:
+    get:
+      tags: [Payments]
+      summary: The customer's order payments (refunded when the order was cancelled or rejected)
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string, enum: [success, refunded, failed] } }
+      responses:
+        '200': { description: Page of payments }
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: >-
+        Orders scoped by role: customers their own, vendors their store's, riders their trips,
+        admins (orders.view) all
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, description: comma = any of, schema: { type: string } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { name: vendorId, in: query, schema: { type: string } }
+        - { name: customerId, in: query, schema: { type: string } }
+        - { name: riderId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Order' } }
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Order with vendor, rider, delivery route, payment and refund
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/Order' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Customer cancels before the vendor accepts (FR-ORD-05); full refund
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { reason: { type: string } } }
+      responses:
+        '200': { description: Cancelled order }
+        '409': { description: Already accepted (error.code CANNOT_CANCEL) }
+
+  /orders/{id}/reviews:
+    post:
+      tags: [Reviews]
+      summary: >-
+        Customer rates the vendor or the rider of their delivered order (FR-SOC-06); once per
+        target. Updates the target's rating and sets `ratedVendor` / `ratedRider` on the order.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, rating]
+              properties:
+                targetType: { type: string, enum: [vendor, rider] }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 500 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/Review' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Not delivered yet, or already rated }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      security: []
+      summary: Public reviews of a vendor or rider
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: targetType, in: query, schema: { type: string, enum: [vendor, rider] } }
+        - { name: targetId, in: query, schema: { type: string } }
+        - { name: rating, in: query, description: comma = any of, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Review' } }
+
+  /refunds:
+    get:
+      tags: [Refunds]
+      summary: >-
+        Refund requests scoped by role: customers their own, vendors their store's, admins
+        (refunds.view) all
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, description: comma = any of, schema: { type: string } }
+        - { name: vendorId, in: query, schema: { type: string } }
+        - { name: orderId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Refund' } }
+    post:
+      tags: [Refunds]
+      summary: >-
+        Customer asks for a refund on a delivered order (BR-REF-02); one per order, amount up to
+        the food subtotal. The vendor must respond before `deadline`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, reason, amount]
+              properties:
+                orderId: { type: string }
+                reason: { type: string }
+                details: { type: string, maxLength: 500 }
+                amount: { type: integer, description: kobo, at most the order subtotal }
+                photos: { type: array, maxItems: 3, items: { type: string, description: URL or data URI } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/Refund' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Order not delivered, or a refund already exists }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /refunds/{id}:
+    get:
+      tags: [Refunds]
+      summary: Refund with its full timeline
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/Refund' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /refunds/{id}/confirm:
+    post:
+      tags: [Refunds]
+      summary: Customer confirms they received a refund the vendor marked as paid (BR-REF-04)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Refund (status confirmed) }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Not marked as paid yet }
+
+  /refunds/{id}/dispute:
+    post:
+      tags: [Refunds]
+      summary: Customer disputes a paid or rejected refund; admins are notified (BR-REF-04)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, maxLength: 500 } }
+      responses:
+        '200': { description: Refund (status disputed) }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: The vendor has not responded yet }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: The signed-in user's in-app notifications
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - { name: unread, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListSuccess'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Badge count for the bell
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data: { type: object, properties: { count: { type: integer } } }
+
+  /notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark one notification as read
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: The notification }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark every notification as read
+      responses:
+        '200': { description: OK }
+
+  /vendor/onboarding:
+    get:
+      tags: [Onboarding]
+      summary: The signed-in vendor's application, saved step and approval status
+      responses:
+        '200':
+          description: Application
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/VendorOnboarding' } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    patch:
+      tags: [Onboarding]
+      summary: Save one wizard step. Saved progress only moves forward.
+      description: |
+        Only while the application is `draft` or `rejected`. Fields per step:
+        - `type`: `type` (restaurant | home_cook). Documents for the other type are dropped.
+        - `business`: `name`, `description` (max 300), `phone`, `logo?`, `cover?`
+        - `location`: `address { line1, area, city, state }`, `lat`, `lng`, `deliveryRadiusKm` (1–30), `prepTimeMins` (5–120)
+        - `documents`: no fields; checks every required document is uploaded
+        - `bank`: `bankCode`, `accountNumber` (10 digits); the account name is resolved and stored
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step]
+              properties:
+                step: { type: string, enum: [type, business, location, documents, bank] }
+              additionalProperties: true
+      responses:
+        '200': { description: Updated application (VendorOnboarding) }
+        '409': { description: Already submitted and not rejected (ALREADY_SUBMITTED) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/onboarding/submit:
+    post:
+      tags: [Onboarding]
+      summary: Send the application for admin review; status becomes pending (FR-VEN-02)
+      responses:
+        '200': { description: Updated application (approvalStatus pending) }
+        '409': { description: Already submitted }
+        '422': { description: Some steps are not finished }
+
+  /vendor/documents:
+    post:
+      tags: [Onboarding]
+      summary: Attach an uploaded document. One per type; a new upload replaces the old one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, url]
+              properties:
+                type: { type: string, example: government_id }
+                url: { type: string, description: URL from the upload service }
+      responses:
+        '201': { description: Document }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/documents/{id}:
+    delete:
+      tags: [Onboarding]
+      summary: Remove a document before submitting
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /banks:
+    get:
+      tags: [Onboarding]
+      summary: Nigerian banks supported for settlement (from Paystack)
+      security: []
+      responses:
+        '200': { description: 'Array of { code, name }' }
+
+  /banks/resolve:
+    post:
+      tags: [Onboarding]
+      summary: Look up the account name for a bank account (Paystack resolve)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bankCode, accountNumber]
+              properties:
+                bankCode: { type: string }
+                accountNumber: { type: string, pattern: '^\d{10}$' }
+      responses:
+        '200': { description: '{ bankCode, bankName, accountNumber, accountName }' }
+        '422': { description: 'Unknown bank or account not found (fieldErrors.accountNumber)' }
+
+  /plans:
+    get:
+      tags: [Subscriptions]
+      summary: Plans on sale, cheapest first
+      security: []
+      responses:
+        '200':
+          description: Plans; `meta` carries the trial length and yearly discount
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, const: true }
+                  data: { type: array, items: { $ref: '#/components/schemas/Plan' } }
+                  meta:
+                    type: object
+                    properties:
+                      trialDays: { type: integer }
+                      yearlyDiscountPct: { type: number }
+
+  /vendor/subscription:
+    get:
+      tags: [Subscriptions]
+      summary: The vendor's plan status, current period and whether the free trial is still available
+      responses:
+        '200':
+          description: Subscription state
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { $ref: '#/components/schemas/VendorSubscription' } }
+
+  /vendor/subscription/invoices:
+    get:
+      tags: [Subscriptions]
+      summary: The vendor's plan invoices
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - { name: status, in: query, schema: { type: string, enum: [paid, failed] } }
+      responses:
+        '200': { description: 'Page of invoices { id, planId, planName, interval, amount, status, reference, createdAt }' }
+
+  /vendor/subscription/trial:
+    post:
+      tags: [Subscriptions]
+      summary: Start the free trial (once per business, after approval, no card) (BR-SUB-01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [planId], properties: { planId: { type: string } } }
+      responses:
+        '200': { description: VendorSubscription (status trial) }
+        '409': { description: Not approved yet (NOT_APPROVED) or trial already used (TRIAL_USED) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/subscription/initialize:
+    post:
+      tags: [Subscriptions]
+      summary: Start a Paystack payment for a first plan, a renewal or a prorated upgrade (BR-SUB-03)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanChoice' }
+      responses:
+        '200':
+          description: Transaction ready for the Paystack popup
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          reference: { type: string }
+                          accessCode: { type: string }
+                          amount: { type: integer, description: kobo; prorated for upgrades }
+                          kind: { type: string, enum: [new, upgrade] }
+                          email: { type: string }
+        '409': { description: Already on this plan (SAME_PLAN) or a downgrade (DOWNGRADE_AT_RENEWAL) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/subscription/verify:
+    post:
+      tags: [Subscriptions]
+      summary: Confirm the plan payment with the gateway and activate the plan (idempotent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reference], properties: { reference: { type: string } } }
+      responses:
+        '200': { description: VendorSubscription (status active); an invoice is recorded }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /vendor/subscription/change:
+    post:
+      tags: [Subscriptions]
+      summary: Schedule a downgrade for the next renewal (BR-SUB-03)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanChoice' }
+      responses:
+        '200': { description: VendorSubscription with scheduledChange }
+        '409': { description: Not a downgrade; pay through initialize instead (PAYMENT_REQUIRED) }
+
+  /vendor/subscription/cancel:
+    post:
+      tags: [Subscriptions]
+      summary: Cancel at period end; access continues until then (BR-SUB-02)
+      responses:
+        '200': { description: VendorSubscription (cancelAtPeriodEnd true) }
+        '409': { description: No running plan }
+
+  /vendor/subscription/resume:
+    post:
+      tags: [Subscriptions]
+      summary: Undo a cancellation before the period ends
+      responses:
+        '200': { description: VendorSubscription (cancelAtPeriodEnd false) }
+        '409': { description: The plan has already ended }
+
+  /orders/{id}/accept:
+    post:
+      tags: [Vendor]
+      summary: Accept a paid order before its acceptDeadline
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Order (status accepted) }
+        '409': { description: Not in the paid state, or already auto-rejected (INVALID_STATUS) }
+
+  /orders/{id}/reject:
+    post:
+      tags: [Vendor]
+      summary: Reject a paid or accepted order with a reason; the customer is refunded in full
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 200 } } }
+      responses:
+        '200': { description: Order (status rejected) }
+        '409': { description: Already being prepared }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /orders/{id}/preparing:
+    post:
+      tags: [Vendor]
+      summary: Mark an accepted order as being prepared
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Order (status preparing) }
+        '409': { description: Wrong status }
+
+  /orders/{id}/ready:
+    post:
+      tags: [Vendor]
+      summary: Mark as ready for pickup; dispatch starts looking for a rider
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Order (status ready_for_pickup) }
+        '409': { description: Wrong status }
+
+  /vendor/stats:
+    get:
+      tags: [Vendor]
+      summary: Overview numbers for today, waiting orders, rating, a daily sales series and top dishes
+      parameters: [{ name: days, in: query, schema: { type: integer, default: 14, maximum: 90 } }]
+      responses:
+        '200':
+          description: |
+            `{ today: { orders, sales, ordersChange, salesChange }, waiting, inProgress, rating,
+            ratingCount, followersCount, isPaused, series: [{ date, orders, sales }],
+            topItems: [{ foodItemId, name, quantity, sales }] }` (money in kobo, dates are Lagos days)
+
+  /vendor/sales:
+    get:
+      tags: [Vendor]
+      summary: Food money per order with its Paystack settlement status
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: settlementStatus, in: query, schema: { type: string, enum: [settling, settled, refunded] } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: |
+            Rows `{ id, orderId, orderCode, customerName, amount, settlementStatus, reference, createdAt }`;
+            `meta.summary` = `{ settling, settled, refunded }` over the whole filtered range
+
+  /vendor/sales/daily:
+    get:
+      tags: [Vendor]
+      summary: Food sales per Lagos day, newest first
+      parameters: [{ name: days, in: query, schema: { type: integer, default: 30, maximum: 90 } }]
+      responses:
+        '200': { description: 'Array of { date, orders, amount, settling, settled }' }
+
+  /vendor/menu:
+    get:
+      tags: [Vendor]
+      summary: The vendor's own menu, including sold-out items
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: categoryId, in: query, schema: { type: string } }
+        - { name: availability, in: query, schema: { type: string, enum: [available, sold_out] } }
+      responses:
+        '200': { description: 'Page of food items; meta.limits = { menuItems, photosPerItem, planName, used }' }
+    post:
+      tags: [Vendor]
+      summary: Add a menu item within the plan's item and photo limits
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MenuItemInput' } } }
+      responses:
+        '201': { description: Food item }
+        '409': { description: Plan item limit reached (PLAN_LIMIT) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/menu/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Vendor]
+      summary: One of the vendor's menu items, with the plan limits
+      responses:
+        '200': { description: Food item plus `limits` }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Vendor]
+      summary: Edit a menu item, or just `{ isAvailable }` to mark it sold out / back on sale
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MenuItemInput' } } }
+      responses:
+        '200': { description: Food item }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Vendor]
+      summary: Delete a menu item (past orders keep their own copy)
+      responses:
+        '204': { description: Deleted }
+
+  /vendor/store:
+    get:
+      tags: [Vendor]
+      summary: Store settings (bank shown as the last 4 digits only)
+      responses:
+        '200': { description: 'Store { isPaused, deliveryRadiusKm, prepTimeMins, openingHours, description, logo, cover, bank, bankChangeRequest }' }
+    patch:
+      tags: [Vendor]
+      summary: Update hours, pause orders, delivery radius, prep time or store page details (FR-VEN-03)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isPaused: { type: boolean }
+                deliveryRadiusKm: { type: number, minimum: 1, maximum: 30 }
+                prepTimeMins: { type: integer, minimum: 5, maximum: 120 }
+                description: { type: string, maxLength: 300 }
+                logo: { type: [string, 'null'] }
+                cover: { type: [string, 'null'] }
+                openingHours:
+                  type: array
+                  minItems: 7
+                  maxItems: 7
+                  items:
+                    type: object
+                    properties:
+                      open: { type: string, example: '09:00' }
+                      close: { type: string, example: '21:00' }
+                      closed: { type: boolean }
+      responses:
+        '200': { description: Store }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/bank-change:
+    post:
+      tags: [Vendor]
+      summary: Ask to change the settlement account; it is resolved now and approved by an admin (BR-PAY-02)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bankCode, accountNumber]
+              properties: { bankCode: { type: string }, accountNumber: { type: string } }
+      responses:
+        '200': { description: Store with bankChangeRequest (status pending) }
+        '409': { description: A change is already waiting }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/staff:
+    get:
+      tags: [Vendor]
+      summary: Staff logins and the plan limit
+      responses:
+        '200': { description: '{ staff: [{ id, name, email, role, createdAt }], limit, planName }' }
+    post:
+      tags: [Vendor]
+      summary: Invite a staff member (manager or kitchen)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, role]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                role: { type: string, enum: [manager, kitchen] }
+      responses:
+        '201': { description: Staff member }
+        '409': { description: Plan staff limit reached (PLAN_LIMIT) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /vendor/staff/{id}:
+    delete:
+      tags: [Vendor]
+      summary: Remove a staff login
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '204': { description: Removed }
+
+  /vendor/engagement:
+    get:
+      tags: [Vendor]
+      summary: Likes, followers, unanswered comments and most liked dishes
+      responses:
+        '200': { description: '{ likesCount, followersCount, newFollowers, unansweredComments, rating, ratingCount, topLiked, recentFollowers }' }
+
+  /vendor/comments:
+    get:
+      tags: [Vendor]
+      summary: Customers' comments on the vendor's dishes; reply with POST /food-items/{id}/comments and parentId
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - { name: answered, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: 'Page of { id, foodItemId, foodItemName, authorName, body, createdAt, isAnswered, reply }' }
+
+  /reviews/{id}/reply:
+    post:
+      tags: [Reviews]
+      summary: The vendor replies once to a review of their store
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 500 } } }
+      responses:
+        '200': { description: Review with reply }
+        '409': { description: Already replied }
+
+  /refunds/{id}/respond:
+    post:
+      tags: [Refunds]
+      summary: The vendor accepts (full or part) or rejects a refund request before the deadline (BR-REF-03)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [accepted, rejected] }
+                amount: { type: integer, description: kobo, up to the food subtotal; required when accepted }
+                reason: { type: string, maxLength: 500, description: required when rejected }
+      responses:
+        '200': { description: Refund (accepted or rejected) }
+        '409': { description: Already answered }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /refunds/{id}/mark-paid:
+    post:
+      tags: [Refunds]
+      summary: The vendor records the refund payment reference; the customer is asked to confirm
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reference], properties: { reference: { type: string } } }
+      responses:
+        '200': { description: Refund (status paid) }
+        '409': { description: Not accepted yet }
+
+  /rider/onboarding:
+    get:
+      tags: [Rider]
+      summary: The rider's application, saved step and approval status
+      responses:
+        '200': { description: 'RiderOnboarding { step, approvalStatus, rejectionReason, vehicleType, plateNumber, licenceNumber, guarantor, documents, requiredDocuments, bank }' }
+    patch:
+      tags: [Rider]
+      summary: Save one wizard step
+      description: |
+        - `vehicle`: `vehicleType` (motorcycle | bicycle | car), `plateNumber` (not for bicycles), `licenceNumber`
+        - `guarantor`: `guarantor { name, phone, relationship, address }`
+        - `documents`: no fields; checks every required document is uploaded
+        - `bank`: `bankCode`, `accountNumber`; the account name is resolved and stored
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step]
+              properties: { step: { type: string, enum: [vehicle, guarantor, documents, bank] } }
+              additionalProperties: true
+      responses:
+        '200': { description: Updated application }
+        '409': { description: Already submitted }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /rider/onboarding/submit:
+    post:
+      tags: [Rider]
+      summary: Send the application for admin review (status pending)
+      responses:
+        '200': { description: Updated application }
+        '422': { description: Some steps are not finished }
+
+  /rider/documents:
+    post:
+      tags: [Rider]
+      summary: Attach an uploaded document (one per type)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [type, url], properties: { type: { type: string }, url: { type: string } } }
+      responses:
+        '201': { description: Document }
+
+  /rider/documents/{id}:
+    delete:
+      tags: [Rider]
+      summary: Remove a document before submitting
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '204': { description: Removed }
+
+  /rider/me:
+    get:
+      tags: [Rider]
+      summary: Rider profile, online state, rating and payout account (last 4 digits)
+      responses:
+        '200': { description: RiderProfile }
+
+  /rider/status:
+    post:
+      tags: [Rider]
+      summary: Go online (job offers start) or offline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isOnline]
+              properties:
+                isOnline: { type: boolean }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        '200': { description: RiderProfile }
+        '409': { description: Not approved (NOT_APPROVED) }
+
+  /rider/offers:
+    get:
+      tags: [Rider]
+      summary: Job offers still waiting for an answer
+      responses:
+        '200':
+          description: Offers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties: { data: { type: array, items: { $ref: '#/components/schemas/JobOffer' } } }
+
+  /deliveries/offers/{id}/accept:
+    post:
+      tags: [Rider]
+      summary: Accept a job offer before it expires; the order moves to rider_assigned
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: ActiveDelivery }
+        '409': { description: Expired or taken by another rider (OFFER_GONE) }
+
+  /deliveries/offers/{id}/decline:
+    post:
+      tags: [Rider]
+      summary: Decline (or let expire) a job offer; another offer follows while online
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: JobOffer (declined or expired) }
+
+  /rider/delivery:
+    get:
+      tags: [Rider]
+      summary: The rider's current delivery, or null
+      responses:
+        '200':
+          description: |
+            ActiveDelivery `{ id, orderId, orderCode, status, fee, earning, distanceM, itemCount,
+            pickup { name, phone, address, lat, lng }, dropoff { name, phone, address, note, lat, lng },
+            assignedAt, pickedUpAt }` or null
+
+  /deliveries/{id}/pickup:
+    post:
+      tags: [Rider]
+      summary: Confirm pickup at the vendor (order picked_up)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: ActiveDelivery }
+        '409': { description: Already picked up }
+
+  /deliveries/{id}/complete:
+    post:
+      tags: [Rider]
+      summary: Hand over with the customer's 4-digit delivery code (order delivered)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string, pattern: '^\d{4}$' } } }
+      responses:
+        '200': { description: '{ id, status: delivered, earning, orderCode }' }
+        '409': { description: Not picked up yet }
+        '422': { description: The code does not match (fieldErrors.code) }
+
+  /rider/trips:
+    get:
+      tags: [Rider]
+      summary: Completed deliveries
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'Page of { id, orderId, orderCode, vendorName, dropoffArea, distanceM, fee, earning, deliveredAt }' }
+
+  /rider/earnings:
+    get:
+      tags: [Rider]
+      summary: This month's trips, delivery fees and earnings (payout % of fees, BR-PAY-06)
+      responses:
+        '200': { description: '{ month, payoutPct, trips, deliveryFees, earnings, today: { trips, earnings } }' }
+
+  /rider/statements:
+    get:
+      tags: [Rider]
+      summary: Monthly payout statements, newest first
+      responses:
+        '200': { description: 'Array of { id, month, trips, deliveryFees, payoutPct, amount, adjustments, status, reference, approvedAt, paidAt }' }
+
+  /admin/overview:
+    get:
+      tags: [Admin]
+      summary: GMV and orders today, active deliveries, MRR, delivery-fee revenue, sign-ups, work waiting
+      x-permission: dashboard.view
+      parameters: [{ name: days, in: query, schema: { type: integer, default: 14 } }]
+      responses:
+        '200':
+          description: |
+            `{ gmvToday, gmvChange, ordersToday, ordersChange, activeDeliveries, activeOrders, mrr,
+            payingVendors, deliveryFeeRevenue, signups { customers, vendors, riders }, onlineRiders,
+            pending { vendors, riders, refunds }, series [{ date, orders, gmv }] }`
+
+  /admin/vendors:
+    get:
+      tags: [Admin]
+      summary: Vendors (not drafts) with filters
+      x-permission: vendors.view
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: approvalStatus, in: query, schema: { type: string, enum: [pending, approved, rejected, suspended] } }
+        - { name: subscriptionStatus, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string, enum: [restaurant, home_cook] } }
+        - { name: city, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Page of vendor rows }
+
+  /admin/vendors/{id}:
+    get:
+      tags: [Admin]
+      summary: Vendor detail with documents, full bank account, plan and 30-day numbers
+      x-permission: vendors.view
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Admin vendor detail }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/vendors/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a pending application; the owner is notified
+      x-permission: vendors.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Admin vendor detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/vendors/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject a pending application with a reason the owner sees
+      x-permission: vendors.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } }
+      responses:
+        '200': { description: Admin vendor detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/vendors/{id}/suspend:
+    post:
+      tags: [Admin]
+      summary: Suspend an approved account with a reason
+      x-permission: vendors.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } }
+      responses:
+        '200': { description: Admin vendor detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/vendors/{id}/reinstate:
+    post:
+      tags: [Admin]
+      summary: Lift a suspension
+      x-permission: vendors.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Admin vendor detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/vendors/{id}/bank-change/{decision}:
+    post:
+      tags: [Admin]
+      summary: Approve or reject a vendor's new settlement account (BR-PAY-02)
+      x-permission: vendors.approve
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: decision, in: path, required: true, schema: { type: string, enum: [approve, reject] } }
+      responses:
+        '200': { description: Admin vendor detail }
+        '404': { description: No pending bank change }
+
+  /admin/riders:
+    get:
+      tags: [Admin]
+      summary: Riders (not drafts) with online status, trips and rating
+      description: With `nearOrderId`, only free online riders, nearest to that order's vendor first (reassignment).
+      x-permission: riders.view
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: approvalStatus, in: query, schema: { type: string } }
+        - { name: online, in: query, schema: { type: boolean } }
+        - { name: vehicleType, in: query, schema: { type: string } }
+        - { name: nearOrderId, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'Page of rider rows { id, name, phone, city, vehicleType, approvalStatus, isOnline, isBusy, rating, tripsCount, distanceM? }' }
+
+  /admin/riders/{id}:
+    get:
+      tags: [Admin]
+      summary: Rider detail with licence, guarantor, documents, bank and recent trips
+      x-permission: riders.view
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Admin rider detail }
+
+  /admin/riders/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a pending application; the owner is notified
+      x-permission: riders.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Admin rider detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/riders/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject a pending application with a reason the owner sees
+      x-permission: riders.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } }
+      responses:
+        '200': { description: Admin rider detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/riders/{id}/suspend:
+    post:
+      tags: [Admin]
+      summary: Suspend an approved account with a reason
+      x-permission: riders.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } }
+      responses:
+        '200': { description: Admin rider detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/riders/{id}/reinstate:
+    post:
+      tags: [Admin]
+      summary: Lift a suspension
+      x-permission: riders.approve
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Admin rider detail }
+        '409': { description: Wrong status for this decision }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/customers:
+    get:
+      tags: [Admin]
+      summary: Customers with order counts
+      x-permission: customers.view
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string, enum: [active, suspended, banned] } }
+      responses:
+        '200': { description: Page of customers }
+
+  /admin/customers/{id}/status:
+    post:
+      tags: [Admin]
+      summary: Suspend, ban (reason required) or restore a customer
+      x-permission: customers.ban
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, suspended, banned] }
+                reason: { type: string }
+      responses:
+        '200': { description: '{ id, status }' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/orders/{id}/reassign:
+    post:
+      tags: [Admin]
+      summary: Give an order to another rider before pickup (manual dispatch)
+      x-permission: orders.reassign
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [riderId], properties: { riderId: { type: string } } }
+      responses:
+        '200': { description: Order (rider_assigned with the new rider) }
+        '409': { description: Already picked up }
+        '422': { description: Rider not approved, already has it, or busy (fieldErrors.riderId) }
+
+  /admin/live-map:
+    get:
+      tags: [Admin]
+      summary: Online riders and active deliveries (FR-GPS-04)
+      x-permission: live_map.view
+      responses:
+        '200':
+          description: |
+            LiveMap `{ riders: [{ id, name, city, vehicleType, lat, lng, lastSeenAt, orderId }],
+            deliveries: [{ orderId, code, status, city, riderId, vendor { name, lat, lng },
+            dropoff { area, lat, lng }, etaMins }], at }`
+
+  /admin/payments:
+    get:
+      tags: [Admin]
+      summary: Every transaction with its Paystack split, settlement and reconciliation flag (BR-PAY-08)
+      x-permission: payments.view
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: type, in: query, schema: { type: string, enum: [order, subscription] } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: settlementStatus, in: query, schema: { type: string, enum: [settling, settled] } }
+        - { name: flagged, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: 'Page of payments; meta.summary = { amount, vendorShare, platformShare, fee, flagged }' }
+
+  /admin/payments/{id}/reconcile:
+    post:
+      tags: [Admin]
+      summary: Clear a reconciliation flag with a note on how it was checked
+      x-permission: payments.view
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties: { note: { type: string } }
+      responses:
+        '200': { description: '{ id, flag: null, reconciled: true }' }
+
+  /admin/plans:
+    get:
+      tags: [Admin]
+      summary: All plans including retired, with how many vendors are on each
+      x-permission: subscriptions.view
+      responses:
+        '200': { description: 'Plans; meta = { trialDays, yearlyDiscountPct }' }
+    post:
+      tags: [Admin]
+      summary: Create a plan (BR-SUB-07)
+      x-permission: subscriptions.manage
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PlanInput' } } }
+      responses:
+        '201': { description: Plan }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/plans/{id}:
+    patch:
+      tags: [Admin]
+      summary: Edit a plan's price, limits, placement, analytics, popular flag or retire it
+      x-permission: subscriptions.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PlanInput' } } }
+      responses:
+        '200': { description: Plan }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/subscriptions:
+    get:
+      tags: [Admin]
+      summary: Vendor subscriptions (trial, active, grace, expired), soonest to end first
+      x-permission: subscriptions.view
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string } }
+        - { name: planId, in: query, schema: { type: string } }
+        - { name: interval, in: query, schema: { type: string, enum: [monthly, yearly] } }
+      responses:
+        '200': { description: 'Page of { id, vendorId, vendorName, planName, interval, status, cancelAtPeriodEnd, currentPeriodEnd, trialEndsAt, graceEndsAt }' }
+
+  /admin/subscriptions/{id}/extend:
+    post:
+      tags: [Admin]
+      summary: Complimentary extension; an expired or grace plan becomes active (BR-SUB-07)
+      x-permission: subscriptions.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [days, reason]
+              properties: { days: { type: integer, minimum: 1, maximum: 365 }, reason: { type: string } }
+      responses:
+        '200': { description: '{ id, status, currentPeriodEnd }' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/payouts:
+    get:
+      tags: [Admin]
+      summary: Rider monthly payout statements
+      x-permission: payouts.manage
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string, enum: [draft, approved, paid] } }
+        - { name: month, in: query, schema: { type: string, example: '2026-09' } }
+      responses:
+        '200': { description: Page of payout statements }
+
+  /admin/payouts/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a draft statement (BR-PAY-06)
+      x-permission: payouts.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Statement (approved) }
+        '409': { description: Not a draft }
+
+  /admin/payouts/{id}/mark-paid:
+    post:
+      tags: [Admin]
+      summary: Record the bank transfer reference; the rider is notified
+      x-permission: payouts.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference]
+              properties: { reference: { type: string } }
+      responses:
+        '200': { description: Statement (paid) }
+        '409': { description: Not approved yet }
+
+  /refunds/{id}/comments:
+    post:
+      tags: [Refunds]
+      summary: Internal team comment on a refund (BR-REF-05)
+      x-permission: refunds.view
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties: { body: { type: string, maxLength: 500 } }
+      responses:
+        '200': { description: Refund with comments }
+
+  /refunds/{id}/escalate:
+    post:
+      tags: [Refunds]
+      summary: Escalate a refund; vendor and customer are told the team stepped in (BR-REF-05)
+      x-permission: refunds.escalate
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string } }
+      responses:
+        '200': { description: Refund (escalated) }
+        '409': { description: Already closed or escalated }
+
+  /admin/reports:
+    get:
+      tags: [Admin]
+      summary: Moderation queue of reported comments and dishes, with a preview of each
+      x-permission: moderation.manage
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string, enum: [open, resolved, dismissed] } }
+        - { name: targetType, in: query, schema: { type: string, enum: [comment, food_item] } }
+      responses:
+        '200': { description: 'Page of reports { id, targetType, targetId, reason, status, reporterName, target, action?, resolvedBy? }' }
+
+  /admin/reports/{id}/resolve:
+    post:
+      tags: [Admin]
+      summary: Hide, remove or dismiss; every open report on the same thing is settled
+      x-permission: moderation.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties: { action: { type: string, enum: [hide, remove, dismiss] } }
+      responses:
+        '200': { description: Report }
+        '409': { description: Already handled }
+
+  /admin/tickets:
+    get:
+      tags: [Admin]
+      summary: Support inbox
+      x-permission: support.manage
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string, example: 'open,pending' } }
+        - { name: assignee, in: query, schema: { type: string, description: 'me, none or an admin id' } }
+        - { name: priority, in: query, schema: { type: string, enum: [low, normal, high] } }
+      responses:
+        '200': { description: Page of tickets (with lastMessage) }
+
+  /admin/tickets/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Admin]
+      summary: Ticket with every message, including internal notes
+      x-permission: support.manage
+      responses:
+        '200': { description: Ticket }
+    patch:
+      tags: [Admin]
+      summary: Change status, priority or assignee
+      x-permission: support.manage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [open, pending, resolved, closed] }
+                priority: { type: string, enum: [low, normal, high] }
+                assigneeId: { type: [string, 'null'] }
+      responses:
+        '200': { description: Ticket }
+
+  /admin/tickets/{id}/messages:
+    post:
+      tags: [Admin]
+      summary: Reply (the user is notified; open → pending) or add an internal note
+      x-permission: support.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties: { body: { type: string, maxLength: 2000 }, internal: { type: boolean } }
+      responses:
+        '200': { description: Ticket }
+
+  /admin/agents:
+    get:
+      tags: [Admin]
+      summary: Admins who can answer tickets (for assignment)
+      x-permission: support.manage
+      responses:
+        '200': { description: 'Array of { id, name }' }
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: Platform settings
+      x-permission: settings.manage
+      responses:
+        '200': { description: Settings }
+    patch:
+      tags: [Admin]
+      summary: Change fees, payout %, timeouts, trial/grace, refunds, service areas or templates (logged)
+      x-permission: settings.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliveryBaseFee: { type: integer, description: kobo }
+                deliveryPerKm: { type: integer, description: kobo }
+                deliveryMaxFee: { type: integer, description: kobo }
+                riderPayoutPct: { type: number }
+                vendorAcceptTimeoutSec: { type: integer }
+                riderOfferTimeoutSec: { type: integer }
+                trialDays: { type: integer }
+                graceDays: { type: integer }
+                yearlyDiscountPct: { type: number }
+                refundDeadlineHours: { type: integer }
+                refundMissedAction: { type: string, enum: [escalate, warn, suspend] }
+                serviceAreas: { type: array, items: { type: string } }
+                notificationTemplates:
+                  type: array
+                  items: { type: object, properties: { key: { type: string }, channel: { type: string }, subject: { type: string }, body: { type: string } } }
+      responses:
+        '200': { description: Settings }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Admin accounts
+      x-permission: admin_users.manage
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: adminRole, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'Page of { id, name, email, adminRole, status, createdAt }' }
+    post:
+      tags: [Admin]
+      summary: Add an admin (they get an email to set a password)
+      x-permission: admin_users.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName, email, adminRole]
+              properties: { firstName: { type: string }, lastName: { type: string }, email: { type: string }, adminRole: { type: string, enum: [super_admin, support, finance, dispatch, onboarding] } }
+      responses:
+        '201': { description: Admin }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/users/{id}:
+    patch:
+      tags: [Admin]
+      summary: Change another admin's role or suspend / restore them
+      x-permission: admin_users.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { adminRole: { type: string }, status: { type: string, enum: [active, suspended] } } }
+      responses:
+        '200': { description: Admin }
+        '409': { description: You can't change yourself }
+
+  /admin/roles:
+    get:
+      tags: [Admin]
+      summary: Admin sub-roles with their permissions, and every permission there is
+      x-permission: admin_users.manage
+      responses:
+        '200': { description: '{ roles: [{ id, permissions }], permissions: string[] }' }
+
+  /admin/roles/{id}:
+    patch:
+      tags: [Admin]
+      summary: Set a role's permissions (super_admin is locked; dashboard.view is required)
+      x-permission: admin_users.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties: { permissions: { type: array, items: { type: string } } }
+      responses:
+        '200': { description: Role }
+        '409': { description: Super admin can't be changed }
+
+  /admin/roles/{id}/reset:
+    post:
+      tags: [Admin]
+      summary: Put a role back to its default permissions
+      x-permission: admin_users.manage
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Role }
+
+  /admin/audit-log:
+    get:
+      tags: [Admin]
+      summary: Admin actions and money events
+      x-permission: audit_log.view
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/search'
+        - { name: actorRole, in: query, schema: { type: string } }
+        - { name: targetType, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string, description: prefix match, comma for several } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'Page of { id, actorName, actorRole, action, targetType, targetId, summary, ip, createdAt }' }
+
+  /support/tickets:
+    get:
+      tags: [Support]
+      summary: The signed-in user's tickets (internal notes are never returned)
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/search'
+        - { name: status, in: query, schema: { type: string, enum: [open, pending, resolved, closed] } }
+      responses:
+        '200': { description: 'Page of { id, number, subject, status, orderCode, lastMessage, hasReply, updatedAt }' }
+    post:
+      tags: [Support]
+      summary: Open a ticket, optionally about one of the user's orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body]
+              properties:
+                subject: { type: string, maxLength: 120 }
+                body: { type: string, maxLength: 2000 }
+                orderId: { type: string }
+      responses:
+        '201': { description: Ticket }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /support/tickets/{id}:
+    get:
+      tags: [Support]
+      summary: One of the user's tickets with the conversation
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Ticket }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /support/tickets/{id}/messages:
+    post:
+      tags: [Support]
+      summary: Reply on a ticket; a waiting or resolved ticket opens again
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 2000 } } }
+      responses:
+        '200': { description: Ticket }
+        '409': { description: The ticket is closed }
+
+  /support/tickets/{id}/resolve:
+    post:
+      tags: [Support]
+      summary: The user says their problem is solved
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Ticket (resolved) }
+
+  /orders/{id}/chat:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [Support]
+      summary: Customer–rider chat for an order (the customer and the assigned rider only)
+      responses:
+        '200': { description: '{ isOpen, messages: [{ id, senderRole, senderName, body, createdAt }] }' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Support]
+      summary: Send a chat message while the order is rider_assigned or picked_up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 500 } } }
+      responses:
+        '201': { description: Message (also pushed as chat:message) }
+        '409': { description: Chat is closed for this order }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    sort: { name: sort, in: query, schema: { type: string, example: '-createdAt' } }
+    search: { name: search, in: query, schema: { type: string } }
+    cursor: { name: cursor, in: query, schema: { type: string } }
+
+  schemas:
+    Success:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, const: true }
+        data: {}
+
+    ListSuccess:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data: { type: array, items: {} }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    PageMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+        hasNextPage: { type: boolean }
+        hasPrevPage: { type: boolean }
+
+    CursorMeta:
+      type: object
+      properties:
+        nextCursor: { type: [string, 'null'] }
+        limit: { type: integer }
+
+    Error:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, const: false }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string, example: Please check the highlighted fields. }
+            fieldErrors:
+              type: object
+              additionalProperties: { type: string }
+              example: { email: Enter a valid email address }
+
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [customer, vendor, rider, admin] }
+        adminRole: { type: string, enum: [super_admin, support, finance, dispatch, onboarding] }
+        permissions: { type: array, items: { type: string } }
+        firstName: { type: string }
+        lastName: { type: string }
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        avatar: { type: [string, 'null'] }
+        status: { type: string, enum: [active, suspended, banned] }
+        vendor:
+          type: object
+          description: Present for vendor accounts
+          properties:
+            id: { type: string }
+            slug: { type: string }
+            approvalStatus: { type: string, enum: [draft, pending, approved, rejected, suspended] }
+            subscriptionStatus: { type: string, enum: [none, trial, active, grace, expired, cancelled] }
+        rider:
+          type: object
+          description: Present for rider accounts
+          properties:
+            id: { type: string }
+            approvalStatus: { type: string }
+            isOnline: { type: boolean }
+
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        icon: { type: string }
+        itemCount: { type: integer }
+
+    FoodItem:
+      type: object
+      properties:
+        id: { type: string }
+        vendorId: { type: string }
+        categoryId: { type: string }
+        name: { type: string }
+        description: { type: string, maxLength: 500 }
+        price: { type: integer, description: kobo }
+        photos: { type: array, items: { type: string, format: uri } }
+        portion: { type: string }
+        prepTimeMins: { type: integer }
+        isAvailable: { type: boolean }
+        availableDays: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+        optionGroups:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              required: { type: boolean }
+              max: { type: integer }
+              options:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    name: { type: string }
+                    price: { type: integer, description: kobo }
+        likesCount: { type: integer }
+        commentsCount: { type: integer }
+        isLiked: { type: boolean, description: For the signed-in user }
+        distanceM: { type: integer }
+        vendor:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            slug: { type: string }
+            logo: { type: string }
+            rating: { type: number }
+            isOpen: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Vendor:
+      type: object
+      description: Public storefront fields (no bank details or documents)
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        logo: { type: [string, 'null'] }
+        cover: { type: [string, 'null'] }
+        description: { type: string, maxLength: 300 }
+        rating: { type: number }
+        ratingCount: { type: integer }
+        followersCount: { type: integer }
+        isFollowing: { type: boolean }
+        isOpen: { type: boolean, description: Computed from openingHours in Africa/Lagos }
+        isPaused: { type: boolean }
+        prepTimeMins: { type: integer }
+        deliveryRadiusKm: { type: number }
+        distanceM: { type: integer }
+        address:
+          type: object
+          properties:
+            line1: { type: string }
+            area: { type: string }
+            city: { type: string }
+            state: { type: string }
+        openingHours:
+          type: array
+          items:
+            type: object
+            properties:
+              day: { type: integer, minimum: 0, maximum: 6, description: 0 = Sunday }
+              open: { type: string, example: '09:00' }
+              close: { type: string, example: '21:00' }
+              closed: { type: boolean }
+
+    Comment:
+      type: object
+      properties:
+        id: { type: string }
+        foodItemId: { type: string }
+        parentId: { type: [string, 'null'] }
+        body: { type: [string, 'null'], description: null when removed }
+        removed: { type: boolean }
+        isVendorReply: { type: boolean }
+        isMine: { type: boolean }
+        editedAt: { type: [string, 'null'], format: date-time }
+        author:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            avatar: { type: [string, 'null'] }
+        replies: { type: array, items: { $ref: '#/components/schemas/Comment' } }
+        createdAt: { type: string, format: date-time }
+
+    Address:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string, example: Home }
+        line1: { type: string }
+        area: { type: string }
+        city: { type: string }
+        state: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        directions: { type: string }
+        isDefault: { type: boolean }
+
+    AddressInput:
+      type: object
+      required: [line1, area, city, lat, lng]
+      properties:
+        label: { type: string }
+        line1: { type: string }
+        area: { type: string }
+        city: { type: string }
+        state: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        directions: { type: string }
+        isDefault: { type: boolean }
+
+    CheckoutInput:
+      type: object
+      required: [vendorId, items]
+      properties:
+        vendorId: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              foodItemId: { type: string }
+              quantity: { type: integer, minimum: 1 }
+              optionIds: { type: array, items: { type: string } }
+        addressId: { type: string, description: A saved address, or send `address` }
+        address: { $ref: '#/components/schemas/AddressInput' }
+        scheduledFor:
+          type: [string, 'null']
+          format: date-time
+          description: FR-ORD-07; required when the vendor is closed now
+
+    OrderLine:
+      type: object
+      properties:
+        foodItemId: { type: string }
+        name: { type: string }
+        photo: { type: [string, 'null'] }
+        unitPrice: { type: integer, description: kobo }
+        quantity: { type: integer }
+        lineTotal: { type: integer, description: kobo }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              groupId: { type: string }
+              groupName: { type: string }
+              optionId: { type: string }
+              name: { type: string }
+              price: { type: integer }
+
+    Quote:
+      type: object
+      properties:
+        lines: { type: array, items: { $ref: '#/components/schemas/OrderLine' } }
+        subtotal: { type: integer }
+        deliveryFee: { type: integer }
+        processingFee: { type: integer }
+        total: { type: integer }
+        distanceM: { type: integer }
+        etaMins: { type: array, items: { type: integer }, example: [25, 35] }
+        isOpen: { type: boolean }
+        scheduledFor: { type: [string, 'null'], format: date-time }
+
+    Order:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string, example: 4F7Q2A }
+        status:
+          type: string
+          enum: [paid, accepted, rejected, preparing, ready_for_pickup, rider_assigned, picked_up, delivered, cancelled]
+        customerId: { type: string }
+        customerName: { type: string }
+        vendorId: { type: string }
+        vendorName: { type: string }
+        riderId: { type: [string, 'null'] }
+        items: { type: array, items: { $ref: '#/components/schemas/OrderLine' } }
+        subtotal: { type: integer }
+        deliveryFee: { type: integer }
+        processingFee: { type: integer }
+        total: { type: integer }
+        address: { $ref: '#/components/schemas/Address' }
+        deliveryNote: { type: string }
+        scheduledFor: { type: [string, 'null'], format: date-time }
+        deliveryCode: { type: string, description: Only for the customer and admins }
+        etaMins: { type: array, items: { type: integer } }
+        isActive: { type: boolean }
+        statusHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              status: { type: string }
+              at: { type: string, format: date-time }
+              by: { type: string, enum: [system, customer, vendor, rider, admin] }
+        ratedVendor: { type: boolean }
+        ratedRider: { type: boolean }
+        vendor: { type: object, description: Detail only — name, slug, logo, phone, lat, lng }
+        rider: { type: [object, 'null'], description: Detail only — name, phone, vehicle, lat, lng }
+        delivery: { type: [object, 'null'], description: Detail only — pickup, dropoff, route }
+        payment: { type: [object, 'null'], description: Detail only — reference, channel, status }
+        refund: { type: [object, 'null'], description: Detail only — id, status, amount }
+        createdAt: { type: string, format: date-time }
+
+    Review:
+      type: object
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        targetType: { type: string, enum: [vendor, rider] }
+        targetId: { type: string }
+        userId: { type: string }
+        userName: { type: string }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 500 }
+        reply: { type: [string, 'null'], description: Vendor reply }
+        createdAt: { type: string, format: date-time }
+
+    RefundStep:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [requested, accepted, rejected, paid, confirmed, disputed, escalated]
+        at: { type: string, format: date-time }
+        by: { type: string, enum: [system, customer, vendor, admin] }
+        note: { type: [string, 'null'] }
+
+    Refund:
+      type: object
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        orderCode: { type: string }
+        customerId: { type: string }
+        customerName: { type: string }
+        vendorId: { type: string }
+        vendorName: { type: string }
+        reason: { type: string }
+        details: { type: string }
+        amount: { type: integer, description: kobo }
+        orderSubtotal: { type: integer, description: kobo }
+        photos: { type: array, items: { type: string } }
+        status:
+          type: string
+          enum: [requested, accepted, rejected, paid, confirmed, disputed, escalated]
+        deadline: { type: string, format: date-time, description: Vendor must respond by then }
+        vendorResponse:
+          type: [object, 'null']
+          properties:
+            decision: { type: string, enum: [accepted, rejected] }
+            amount: { type: integer, description: kobo; less than requested = partial }
+            reason: { type: [string, 'null'] }
+            at: { type: string, format: date-time }
+        paymentReference: { type: [string, 'null'] }
+        escalated: { type: boolean }
+        timeline: { type: array, items: { $ref: '#/components/schemas/RefundStep' } }
+        createdAt: { type: string, format: date-time }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [order, refund, social, review, subscription, payout, system] }
+        title: { type: string }
+        body: { type: string }
+        link: { type: [string, 'null'], description: In-app path to open }
+        readAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    Plan:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        monthlyPrice: { type: integer, description: kobo }
+        yearlyPrice: { type: integer, description: 'kobo; 12 × monthly minus the yearly discount' }
+        limits:
+          type: object
+          properties:
+            menuItems: { type: [integer, 'null'], description: null = unlimited }
+            photosPerItem: { type: integer }
+            staff: { type: integer }
+        featured: { type: string, enum: [none, occasional, priority] }
+        analytics: { type: string, enum: [basic, full, export] }
+        isPopular: { type: boolean }
+        sortOrder: { type: integer }
+
+    PlanChoice:
+      type: object
+      required: [planId, interval]
+      properties:
+        planId: { type: string }
+        interval: { type: string, enum: [monthly, yearly] }
+
+    VendorSubscription:
+      type: object
+      properties:
+        status: { type: string, enum: [none, trial, active, grace, expired] }
+        trialAvailable: { type: boolean }
+        trialDays: { type: integer }
+        graceDays: { type: integer }
+        subscription:
+          type: [object, 'null']
+          properties:
+            id: { type: string }
+            planId: { type: string }
+            plan: { $ref: '#/components/schemas/Plan' }
+            interval: { type: string, enum: [monthly, yearly] }
+            amount: { type: integer, description: kobo per period }
+            currentPeriodStart: { type: string, format: date-time }
+            currentPeriodEnd: { type: string, format: date-time }
+            trialEndsAt: { type: [string, 'null'], format: date-time }
+            graceEndsAt: { type: [string, 'null'], format: date-time }
+            cancelAtPeriodEnd: { type: boolean }
+            scheduledChange:
+              type: [object, 'null']
+              properties:
+                planId: { type: string }
+                planName: { type: string }
+                interval: { type: string, enum: [monthly, yearly] }
+
+    VendorOnboarding:
+      type: object
+      properties:
+        step: { type: string, enum: [type, business, location, documents, bank, review, submitted] }
+        approvalStatus: { type: string, enum: [draft, pending, approved, rejected, suspended] }
+        rejectionReason: { type: [string, 'null'] }
+        submittedAt: { type: [string, 'null'], format: date-time }
+        type: { type: [string, 'null'], enum: [restaurant, home_cook, null] }
+        name: { type: string }
+        description: { type: string }
+        phone: { type: string }
+        logo: { type: [string, 'null'] }
+        cover: { type: [string, 'null'] }
+        address: { type: [object, 'null'] }
+        lat: { type: [number, 'null'] }
+        lng: { type: [number, 'null'] }
+        deliveryRadiusKm: { type: number }
+        prepTimeMins: { type: integer }
+        documents:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              type: { type: string }
+              label: { type: string }
+              url: { type: string }
+              uploadedAt: { type: string, format: date-time }
+        requiredDocuments:
+          type: array
+          items: { type: object, properties: { type: { type: string }, label: { type: string } } }
+        bank:
+          type: [object, 'null']
+          properties:
+            bankCode: { type: string }
+            bankName: { type: string }
+            accountNumber: { type: string }
+            accountName: { type: string }
+            verified: { type: boolean }
+
+    MenuItemInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 500 }
+        categoryId: { type: string }
+        price: { type: integer, description: kobo }
+        portion: { type: string }
+        prepTimeMins: { type: integer }
+        photos: { type: array, items: { type: string }, description: up to the plan's photosPerItem }
+        isAvailable: { type: boolean }
+        availableDays: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+        availableFrom: { type: [string, 'null'], example: '07:00' }
+        availableTo: { type: [string, 'null'], example: '11:00' }
+        optionGroups:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              required: { type: boolean }
+              max: { type: integer }
+              options:
+                type: array
+                items:
+                  type: object
+                  properties: { id: { type: string }, name: { type: string }, price: { type: integer } }
+
+    JobOffer:
+      type: object
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        orderCode: { type: string }
+        riderId: { type: string }
+        status: { type: string, enum: [pending, accepted, declined, expired] }
+        fee: { type: integer, description: delivery fee in kobo }
+        earning: { type: integer, description: the rider's share in kobo }
+        distanceM: { type: integer, description: vendor to customer }
+        toPickupM: { type: [integer, 'null'], description: rider to vendor }
+        pickup: { type: object, properties: { name: { type: string }, area: { type: string }, lat: { type: number }, lng: { type: number } } }
+        dropoff: { type: object, properties: { area: { type: string }, city: { type: string }, lat: { type: number }, lng: { type: number } } }
+        expiresAt: { type: string, format: date-time, description: 30 seconds after it was sent }
+
+    PlanInput:
+      type: object
+      properties:
+        name: { type: string }
+        monthlyPrice: { type: integer, description: kobo }
+        limits:
+          type: object
+          properties:
+            menuItems: { type: [integer, 'null'] }
+            photosPerItem: { type: integer }
+            staff: { type: integer }
+        featured: { type: string, enum: [none, occasional, priority] }
+        analytics: { type: string, enum: [basic, full, export] }
+        isPopular: { type: boolean }
+        isRetired: { type: boolean }
+
+  responses:
+    Session:
+      description: Signed in
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Success'
+              - properties:
+                  data:
+                    type: object
+                    properties:
+                      accessToken: { type: string }
+                      user: { $ref: '#/components/schemas/User' }
+    Unauthenticated:
+      description: Not signed in or token expired
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Already exists
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    RateLimited:
+      description: Too many requests
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: Field errors
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    LikeState:
+      description: Like state after the change
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Success'
+              - properties:
+                  data:
+                    type: object
+                    properties:
+                      foodItemId: { type: string }
+                      isLiked: { type: boolean }
+                      likesCount: { type: integer }
+    FollowState:
+      description: Follow state after the change
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Success'
+              - properties:
+                  data:
+                    type: object
+                    properties:
+                      vendorId: { type: string }
+                      isFollowing: { type: boolean }
+                      followersCount: { type: integer }
