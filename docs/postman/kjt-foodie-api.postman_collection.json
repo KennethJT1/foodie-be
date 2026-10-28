@@ -1,0 +1,225 @@
+{
+  "info": {
+    "name": "KJT Foodie API",
+    "description": "# KJT Foodie API\n\nRequests are grouped by module in build order. Auth is set once on the collection (Bearer `{{token}}`); each role folder overrides it with that role's token variable (`customerToken`, `vendorToken`, `riderToken`, `adminToken`). The OpenAPI contract in `docs/openapi/` is the master; if this collection and the contract disagree, fix the contract first.\n\nSwagger UI: `{{host}}/docs`\n\n## Response envelope\n\nEvery response is JSON in one of these shapes:\n\n```json\n// single item\n{ \"success\": true, \"data\": { \"id\": \"...\", \"status\": \"accepted\" } }\n\n// list (offset pagination)\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": { \"page\": 2, \"limit\": 20, \"total\": 135, \"totalPages\": 7, \"hasNext\": true, \"hasPrev\": true }\n}\n\n// feed (cursor pagination)\n{ \"success\": true, \"data\": [ ... ], \"meta\": { \"nextCursor\": \"eyJpZCI6...\", \"limit\": 20 } }\n\n// error\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"Some fields are invalid\",\n    \"fieldErrors\": { \"price\": \"Price must be more than ₦0\" },\n    \"requestId\": \"b1f6...\"\n  }\n}\n```\n\n`fieldErrors` appears only on `VALIDATION_ERROR` and `CONFLICT`. Every response carries an `X-Request-Id` header equal to `error.requestId`; quote it when reporting a problem.\n\n## Error codes\n\n| Code | HTTP | When |\n| --- | --- | --- |\n| `VALIDATION_ERROR` | 422 | Body, query or params failed validation (`fieldErrors` lists each field) |\n| `UNAUTHENTICATED` | 401 | Missing, invalid or expired access token |\n| `FORBIDDEN` | 403 | Logged in, but role, permission or ownership check failed |\n| `NOT_FOUND` | 404 | Resource or route does not exist |\n| `CONFLICT` | 409 | Unique value already in use (`fieldErrors` names the field) |\n| `RATE_LIMITED` | 429 | Too many requests (general limit 300/min per IP) |\n| `SUBSCRIPTION_INACTIVE` | 402 | Vendor's subscription is not active |\n| `PAYMENT_FAILED` | 402 | Payment could not be completed |\n| `INTERNAL` | 500 | Unexpected server error; quote `requestId` |\n\nMalformed JSON bodies return `VALIDATION_ERROR` with HTTP 400; bodies over 1 MB with HTTP 413.\n\n## Variables\n\n| Variable | Meaning |\n| --- | --- |\n| `host` | Server root, e.g. `http://localhost:4000` |\n| `baseUrl` | `{{host}}/api/v1` |\n| `customerToken`, `vendorToken`, `riderToken`, `adminToken` | Saved by the login tests (phase 6) |\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "baseUrl",
+      "value": "{{host}}/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "customerToken",
+      "value": ""
+    },
+    {
+      "key": "vendorToken",
+      "value": ""
+    },
+    {
+      "key": "riderToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Liveness and readiness checks for load balancers and uptime monitors. No auth, not rate limited. These live at the server root, not under `/api/v1`.",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "Check liveness",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Success envelope', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "pm.test('Has X-Request-Id header', () => pm.response.to.have.header('X-Request-Id'));",
+                  "pm.test('Status is ok', () => pm.expect(pm.response.json().data.status).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/health",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Returns 200 while the process is running.\n\n**Who can call it:** anyone (no auth).\n\n**Response `data`:**\n- `status` (string) — always `ok`\n- `uptime` (integer) — seconds since the process started\n\n**Side effects:** none."
+          },
+          "response": [
+            {
+              "name": "Process is up",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{host}}/health",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"ok\",\n    \"uptime\": 3600\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Check readiness",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Success envelope', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "pm.test('Has X-Request-Id header', () => pm.response.to.have.header('X-Request-Id'));",
+                  "pm.test('MySQL is up', () => pm.expect(pm.response.json().data.checks.mysql).to.eql('up'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/health/ready",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Returns 200 when every dependency is reachable (MySQL now; Redis from phase 5), otherwise 503 with the error envelope. Load balancers should send traffic only to ready instances.\n\n**Who can call it:** anyone (no auth).\n\n**Response `data`:**\n- `status` (string) — `ready`\n- `checks` (object) — `mysql: \"up\"`\n\n**Errors:** 503 `INTERNAL` when a dependency is down.\n\n**Side effects:** none."
+          },
+          "response": [
+            {
+              "name": "Ready",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{host}}/health/ready",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"ready\",\n    \"checks\": {\n      \"mysql\": \"up\"\n    }\n  }\n}"
+            },
+            {
+              "name": "MySQL down",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{host}}/health/ready",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"INTERNAL\",\n    \"message\": \"MySQL is not reachable\",\n    \"requestId\": \"b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

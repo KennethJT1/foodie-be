@@ -1,0 +1,178 @@
+openapi: 3.0.3
+info:
+  title: KJT Foodie API
+  version: 0.2.0
+  description: |
+    Contract shared by the KJT Foodie backend and the frontend mock API (MSW).
+    Any change here is a change to both — agree it with the frontend first.
+
+    ## Response envelope
+    Every response is JSON wrapped in an envelope:
+
+    - Single item: `{ "success": true, "data": { ... } }`
+    - Offset list: `{ "success": true, "data": [ ... ], "meta": { "page", "limit", "total", "totalPages", "hasNext", "hasPrev" } }`
+    - Cursor feed: `{ "success": true, "data": [ ... ], "meta": { "nextCursor", "limit" } }`
+    - Error: `{ "success": false, "error": { "code", "message", "fieldErrors"?, "requestId" } }`
+
+    ## Error codes
+    | Code | HTTP | When |
+    | --- | --- | --- |
+    | `VALIDATION_ERROR` | 422 | Body, query or params failed validation (`fieldErrors` lists each field) |
+    | `UNAUTHENTICATED` | 401 | Missing, invalid or expired access token |
+    | `FORBIDDEN` | 403 | Logged in, but role, permission or ownership check failed |
+    | `NOT_FOUND` | 404 | Resource or route does not exist |
+    | `CONFLICT` | 409 | Unique value already in use (`fieldErrors` names the field) |
+    | `RATE_LIMITED` | 429 | Too many requests; retry after the `RateLimit` header's reset |
+    | `SUBSCRIPTION_INACTIVE` | 402 | Vendor's subscription is not active |
+    | `PAYMENT_FAILED` | 402 | Payment could not be completed |
+    | `INTERNAL` | 500 | Unexpected server error; quote `requestId` to support |
+
+    Malformed JSON bodies return `VALIDATION_ERROR` with HTTP 400; oversized bodies (over 1 MB) with HTTP 413.
+
+    Every response carries an `X-Request-Id` header, the same value as `error.requestId`.
+servers:
+  - url: /api/v1
+    description: Current server
+tags:
+  - name: Health
+    description: Liveness and readiness checks for load balancers and uptime monitors
+
+paths: {}
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, totalPages, hasNext, hasPrev]
+      properties:
+        page: { type: integer, example: 2 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 135 }
+        totalPages: { type: integer, example: 7 }
+        hasNext: { type: boolean, example: true }
+        hasPrev: { type: boolean, example: true }
+
+    CursorMeta:
+      type: object
+      required: [nextCursor, limit]
+      properties:
+        nextCursor: { type: string, nullable: true, example: eyJpZCI6IjAxOTJmMyJ9 }
+        limit: { type: integer, example: 20 }
+
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHENTICATED
+        - FORBIDDEN
+        - NOT_FOUND
+        - CONFLICT
+        - RATE_LIMITED
+        - SUBSCRIPTION_INACTIVE
+        - PAYMENT_FAILED
+        - INTERNAL
+
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string, example: Some fields are invalid }
+            fieldErrors:
+              type: object
+              additionalProperties: { type: string }
+              example: { price: Price must be more than ₦0 }
+            requestId: { type: string, example: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Some fields are invalid
+              fieldErrors: { price: Price must be more than ₦0 }
+              requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c
+    Unauthenticated:
+      description: Not logged in
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: UNAUTHENTICATED, message: You need to log in, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+    Forbidden:
+      description: Not allowed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: FORBIDDEN, message: You do not have permission to do this, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: NOT_FOUND, message: Not found, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+    Conflict:
+      description: Already exists
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error:
+              code: CONFLICT
+              message: This already exists
+              fieldErrors: { email: This email is already in use }
+              requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: RATE_LIMITED, message: 'Too many requests, please try again shortly', requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+    SubscriptionInactive:
+      description: Vendor subscription is not active
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: SUBSCRIPTION_INACTIVE, message: Your subscription is not active, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+    PaymentFailed:
+      description: Payment failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: PAYMENT_FAILED, message: Payment failed, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }
+    Internal:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: INTERNAL, message: Something went wrong, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }

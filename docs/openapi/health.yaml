@@ -1,0 +1,61 @@
+paths:
+  /health:
+    servers:
+      - url: /
+    get:
+      tags: [Health]
+      summary: Liveness check
+      description: Returns 200 while the process is running. Not rate limited. No auth.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Process is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [status, uptime]
+                    properties:
+                      status: { type: string, enum: [ok] }
+                      uptime: { type: integer, description: Seconds since the process started, example: 3600 }
+
+  /health/ready:
+    servers:
+      - url: /
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: Returns 200 when MySQL is reachable, 503 otherwise. Load balancers send traffic only to ready instances. Not rate limited. No auth.
+      operationId: getHealthReady
+      responses:
+        '200':
+          description: Ready to serve traffic
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [status, checks]
+                    properties:
+                      status: { type: string, enum: [ready] }
+                      checks:
+                        type: object
+                        properties:
+                          mysql: { type: string, enum: [up] }
+        '503':
+          description: A dependency is down
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error: { code: INTERNAL, message: MySQL is not reachable, requestId: b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c }

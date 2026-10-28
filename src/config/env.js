@@ -8,6 +8,12 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   APP_URL: z.url(),
   TZ: z.string().default('Africa/Lagos'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  // Comma-separated frontend origins allowed by CORS
+  CORS_ORIGINS: z
+    .string()
+    .default('http://localhost:5173')
+    .transform((value) => value.split(',').map((origin) => origin.trim()).filter(Boolean)),
 
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().positive().default(3306),
