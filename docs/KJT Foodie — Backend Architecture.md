@@ -23,8 +23,8 @@ The KJT Foodie backend is a modular Express REST API on MySQL (via Sequelize), w
 | Maps | Google Maps Platform: Geocoding, Distance Matrix |
 | Logging | Pino + `pino-http`, request IDs |
 | API docs | OpenAPI 3 (`swagger-jsdoc` + Swagger UI at `/docs`) |
-| Tests | Jest + Supertest; Testcontainers for MySQL/Redis |
-| Process / deploy | Docker; API and workers as separate processes; PM2 or a container platform |
+| Tests | Jest + Supertest; local test MySQL database and local Redis |
+| Process / deploy | No Docker; API and workers as separate Node processes managed by PM2 |
 
 ### Principles
 
@@ -76,7 +76,6 @@ kjt-foodie-api/
 │     └─ reviews/  support/  notifications/  reports/  settings/  admin/
 ├─ tests/                         # unit/ integration/ (mirrors modules)
 ├─ docs/openapi/                  # OpenAPI YAML per module
-├─ docker-compose.yml             # mysql, redis, api, worker
 ├─ .sequelizerc
 └─ .env.example
 ```
@@ -456,7 +455,7 @@ TZ=Africa/Lagos
 | Level | Tool | Scope |
 | --- | --- | --- |
 | Unit | Jest | Services, `buildListQuery`, money and geo utils, policies |
-| Integration | Jest + Supertest + Testcontainers (MySQL, Redis) | Each endpoint: auth, roles, validation, pagination, filters |
+| Integration | Jest + Supertest + local test MySQL and Redis | Each endpoint: auth, roles, validation, pagination, filters |
 | Contract | OpenAPI schema checks | Responses match the documented shapes the frontend mocks use |
 | Jobs | Jest with a test Redis | Processors are idempotent; delayed jobs fire correctly |
 | Payments | Paystack test mode + recorded webhooks | Split checkout, renewals, failures |
@@ -467,11 +466,11 @@ Target: 80% line coverage on services; CI (GitHub Actions) runs lint, tests and 
 
 | Environment | Purpose | Paystack keys |
 | --- | --- | --- |
-| Local | Docker Compose: MySQL, Redis, API, worker, Bull Board | Test |
+| Local | MySQL and Redis installed locally; API, worker and Bull Board via npm scripts | Test |
 | Staging | Same as production, seeded demo data, used for UAT | Test |
 | Production | Live | Live |
 
-- One Docker image, started as `api` (2+ instances behind a load balancer) or `worker` (1+ instances) by command.
-- Migrations run as a release step before new containers start; every migration has a `down`.
+- One codebase, started by PM2 as `api` (2+ instances behind a load balancer) or `worker` (1+ instances) by command.
+- Migrations run as a release step before the new processes start; every migration has a `down`.
 - Managed MySQL with daily backups and point-in-time recovery; managed Redis with persistence (AOF) so queued jobs survive restarts.
 - Zero-downtime rolling deploys; workers finish current jobs before stopping.

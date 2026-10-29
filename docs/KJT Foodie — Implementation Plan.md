@@ -50,7 +50,7 @@ Each backend sprint ends by switching the matching frontend features from mocks 
 
 | Sprint | Weeks | Goal | Main tasks | Frontend switched off mocks |
 | --- | --- | --- | --- | --- |
-| BE1 | 15–16 | Core and auth | Express app, config validation, Docker Compose (MySQL, Redis), Pino logging, error handler, response helpers, `buildListQuery` + `paginate`, Sequelize setup and first migrations (users, roles, permissions, tokens, OTP, addresses), auth (OTP, password, JWT + refresh rotation), `authenticate`, `authorize`, `validate`, policies, rate limits, BullMQ setup + `notifications` queue (SMS, email), seeders, CI | Auth, profile, addresses |
+| BE1 | 15–16 | Core and auth | Express app, config validation, local MySQL + Redis setup, Pino logging, error handler, response helpers, `buildListQuery` + `paginate`, Sequelize setup and first migrations (users, roles, permissions, tokens, OTP, addresses), auth (OTP, password, JWT + refresh rotation), `authenticate`, `authorize`, `validate`, policies, rate limits, BullMQ setup + `notifications` queue (SMS, email), seeders, CI | Auth, profile, addresses |
 | BE2 | 17–18 | Vendors and riders onboarding | Vendor and rider tables, documents and required-documents list, Cloudinary signed uploads, admin approvals, bank account resolve, Paystack subaccount creation, opening hours, staff, audit logging | Vendor and rider onboarding, admin approvals |
 | BE3 | 19–20 | Plans and subscriptions | Plans and prices, Paystack plans, trial start, subscription checkout, webhooks (`subscription.*`, `invoice.*`), `subscriptions` queue: reminders, grace, expiry, storefront visibility; settings module | Plans, subscription pages, admin plans |
 | BE4 | 21–22 | Catalogue and social | Categories, food items, photos, option groups, availability, plan limits, feed (cursor), search (FULLTEXT), geo "near me", likes, comments, follows, reports, moderation | Feed, search, storefront, menu management, moderation |
@@ -58,7 +58,7 @@ Each backend sprint ends by switching the matching frontend features from mocks 
 | BE6 | 25–26 | Dispatch, delivery and GPS | Rider online status, Redis GEO, nearest-rider offers with timeouts, manual assignment, deliveries, `rider:location` socket handling, ETA, GPS trail, delivery code, reviews, rider earnings, monthly statement job, payout approval | Rider app, live tracking, admin live map, rider payouts |
 | BE7 | 27–28 | Refunds, support, reports | Refund flow and events, deadline job, delivery-fee refunds via Paystack, support tickets, customer–rider chat, notifications centre and templates, daily stats job, admin reports and CSV exports, reconciliation job, Bull Board, audit log search | Refunds, support, reports, audit log. **Gate: all mocks removed** |
 
-Integration tests (Supertest + Testcontainers) are written in the same sprint as each endpoint, not later.
+Integration tests (Supertest + local test database) are written in the same sprint as each endpoint, not later.
 
 ## 5. Integration, testing and launch (weeks 29–36)
 
