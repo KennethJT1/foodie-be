@@ -1,5 +1,5 @@
-# KJT Foodie API contract — DRAFT v0.1 (frontend copy).
-# The master copy lives in the backend repo. Any change needs agreement from both teams.
+# KJT Foodie API contract — DRAFT v0.1 (master copy, backend repo; served by Swagger UI at /docs).
+# Any change needs agreement from both teams.
 # Covers every endpoint the mock handlers implement (src/mocks/handlers/) as of phase 17,
 # ready to hand to the backend team.
 openapi: 3.1.0
@@ -85,6 +85,38 @@ paths:
                         properties:
                           status: { type: string, example: ok }
                           time: { type: string, format: date-time }
+                          uptime: { type: integer, description: Seconds since the process started, example: 3600 }
+
+  /health/ready:
+    servers:
+      - url: /
+    get:
+      tags: [System]
+      security: []
+      summary: Readiness check (server root, for load balancers)
+      description: |
+        200 when MySQL is reachable, 503 otherwise. Load balancers send traffic only to ready
+        instances. `GET /health` (liveness) is also served at the server root. Not rate limited.
+      responses:
+        '200':
+          description: Ready to serve traffic
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          status: { type: string, example: ready }
+                          checks:
+                            type: object
+                            properties:
+                              mysql: { type: string, example: up }
+        '503':
+          description: A dependency is down (error.code INTERNAL_ERROR)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 
   /auth/register:
     post:
@@ -2502,6 +2534,9 @@ components:
               type: object
               additionalProperties: { type: string }
               example: { email: Enter a valid email address }
+            requestId:
+              type: string
+              description: Same value as the X-Request-Id response header; quote it to support
 
     User:
       type: object

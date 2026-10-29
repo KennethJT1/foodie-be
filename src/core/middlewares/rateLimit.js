@@ -12,8 +12,8 @@ export const rateLimit = ({ windowMs = 60_000, limit, skip } = {}) =>
     handler: (req, res, next) => next(new RateLimitedError()),
   });
 
+// /health, /health/ready and /api/v1/health: polled by load balancers and uptime monitors
+export const isHealthCheck = (req) => req.path.startsWith('/health') || req.path === '/api/v1/health';
+
 // General limit: 300 requests per minute per IP (health checks are exempt)
-export const generalRateLimit = rateLimit({
-  limit: 300,
-  skip: (req) => req.path.startsWith('/health'),
-});
+export const generalRateLimit = rateLimit({ limit: 300, skip: isHealthCheck });

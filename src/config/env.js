@@ -9,15 +9,21 @@ const envSchema = z.object({
   APP_URL: z.url(),
   TZ: z.string().default('Africa/Lagos'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  // Comma-separated frontend origins allowed by CORS
+  // Comma-separated frontend origins allowed by CORS: dev server, Playwright, vite preview
   CORS_ORIGINS: z
     .string()
-    .default('http://localhost:5173')
-    .transform((value) => value.split(',').map((origin) => origin.trim()).filter(Boolean)),
+    .default('http://localhost:5173,http://localhost:5174,http://localhost:4173')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    ),
 
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().positive().default(3306),
   DB_NAME: z.string().min(1),
+  DB_NAME_TEST: z.string().min(1).optional(),
   DB_USER: z.string().min(1),
   DB_PASS: z.string(),
   DB_SSL: z.stringbool().default(false),

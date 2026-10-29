@@ -1,16 +1,24 @@
 import { UniqueConstraintError, ValidationError as SequelizeValidationError } from 'sequelize';
-import { AppError, ConflictError, ValidationError } from '../errors/index.js';
+import {
+  AppError,
+  BadRequestError,
+  ConflictError,
+  ERROR_CODES,
+  PayloadTooLargeError,
+  ValidationError,
+} from '../errors/index.js';
 
 // Maps anything thrown in the app to an AppError the client may see
 const normalise = (err) => {
   if (err instanceof AppError) return err;
 
-  // Must come before SequelizeValidationError: it is a subclass of it
+  // Must come before SequelizeValidationError: it is a subclass of it.
+  // Services should check uniqueness themselves with a specific message; this is the safety net.
   if (err instanceof UniqueConstraintError) {
     const fieldErrors = Object.fromEntries(
-      (err.errors ?? []).map((e) => [e.path, `This ${e.path} is already in use`]),
+      (err.errors ?? []).map((e) => [e.path, `That ${e.path} is already in use. Try another one.`]),
     );
-    return new ConflictError('This already exists', fieldErrors);
+    return new ConflictError('CONFLICT', undefined, fieldErrors);
   }
 
   if (err instanceof SequelizeValidationError) {
@@ -18,16 +26,17 @@ const normalise = (err) => {
     return new ValidationError(fieldErrors);
   }
 
-  // body-parser errors: malformed JSON, payload too large...
+  // body-parser errors: malformed JSON, payload too large, unsupported encoding...
   if (err.type && err.status >= 400 && err.status < 500) {
-    const message = err.type === 'entity.parse.failed' ? 'The request body is not valid JSON' : err.message;
-    return new AppError(message, { code: 'VALIDATION_ERROR', status: err.status });
+    if (err.type === 'entity.too.large')
+      return new PayloadTooLargeError('That request is too large. Try sending less data.');
+    if (err.type === 'entity.parse.failed') return new BadRequestError("The request body isn't valid JSON.");
+    return new BadRequestError();
   }
 
   return null;
 };
 
-// eslint-disable-next-line no-unused-vars
 export const errorHandler = (err, req, res, next) => {
   const appError = normalise(err);
 
@@ -36,7 +45,7 @@ export const errorHandler = (err, req, res, next) => {
     req.log?.error({ err }, 'Unhandled error');
     return res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL', message: 'Something went wrong', requestId: req.id },
+      error: { code: 'INTERNAL_ERROR', message: ERROR_CODES.INTERNAL_ERROR.message, requestId: req.id },
     });
   }
 

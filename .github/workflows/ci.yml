@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: kjt_foodie
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=5s --health-retries=20
+
+    env:
+      APP_URL: http://localhost:4000
+      LOG_LEVEL: silent
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: kjt_foodie
+      DB_NAME_TEST: kjt_foodie_test
+      DB_USER: root
+      DB_PASS: root
+      REDIS_URL: redis://127.0.0.1:6379
+      # Placeholders: nothing in CI talks to Cloudinary
+      CLOUDINARY_CLOUD_NAME: ci
+      CLOUDINARY_API_KEY: ci
+      CLOUDINARY_API_SECRET: ci
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - name: Migrate a fresh database, then undo everything
+        run: npm run db:migrate && npm run db:migrate:undo:all && npm run db:migrate
+      - run: npm test

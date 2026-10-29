@@ -29,8 +29,14 @@ const base = {
   seederStorageTableName: 'sequelize_seeds',
 };
 
+// Tests wipe tables between files, so they must never point at a real database
+const testDatabase = process.env.DB_NAME_TEST || `${process.env.DB_NAME}_test`;
+if (!testDatabase.endsWith('_test')) {
+  throw new Error(`DB_NAME_TEST must end in "_test" (got "${testDatabase}")`);
+}
+
 module.exports = {
   development: base,
-  test: base,
+  test: { ...base, database: testDatabase },
   production: { ...base, pool: { max: 20, min: 2, acquire: 30000, idle: 10000 } },
 };

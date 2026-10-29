@@ -8,7 +8,7 @@ import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { loadOpenApiSpec } from './config/openapi.js';
-import { errorHandler, generalRateLimit, notFound, requestId } from './core/middlewares/index.js';
+import { errorHandler, generalRateLimit, isHealthCheck, notFound, requestId } from './core/middlewares/index.js';
 import healthRoutes from './modules/health/health.routes.js';
 import apiRoutes from './routes.js';
 
@@ -21,10 +21,13 @@ if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
 // Global middleware chain (Backend Architecture, section 4) — order matters
 app.use(requestId);
 app.use(helmet());
+// The frontend runs on another port and sends the refresh-token cookie (handoff, section 1)
 app.use(
   cors({
     origin: env.CORS_ORIGINS,
     credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
     exposedHeaders: ['X-Request-Id'],
   }),
 );
@@ -47,7 +50,7 @@ app.use(
       if (res.statusCode >= 400) return 'warn';
       return 'info';
     },
-    autoLogging: { ignore: (req) => req.url.startsWith('/health') },
+    autoLogging: { ignore: isHealthCheck },
   }),
 );
 app.use(generalRateLimit);
