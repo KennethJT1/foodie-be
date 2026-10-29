@@ -42,6 +42,14 @@
     {
       "key": "adminToken",
       "value": ""
+    },
+    {
+      "key": "addressId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
     }
   ],
   "item": [
@@ -284,6 +292,1219 @@
                 }
               ],
               "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"INTERNAL_ERROR\",\n    \"message\": \"The database isn't reachable right now.\",\n    \"requestId\": \"b1f6c3e2-5a4d-4f8e-9c1b-2d7e8f9a0b1c\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Sign-up, sign-in (password, OTP, Google), refresh, logout and password reset. Public except logout. The refresh token is an httpOnly cookie `kjt_refresh` (Path=/api/v1/auth, 30 days, rotated on every refresh); Postman keeps it in its cookie jar. Seeded accounts all use `password123`; every OTP outside production is `123456`. Rate limits: 5/min per IP per route; OTP requests also 5 per 10 min per phone.",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "Sign up",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"customer\",\n  \"firstName\": \"Ngozi\",\n  \"lastName\": \"Eze\",\n  \"email\": \"ngozi.eze@example.com\",\n  \"phone\": \"0803 123 4567\",\n  \"password\": \"jollof123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates a customer, vendor or rider account (admins are created by a super admin). Vendors and riders also get an empty profile with `approvalStatus: draft`. Sends a `verify` OTP by SMS; call **Verify OTP** with `purpose: verify` to sign in.\n\n**Errors:** 409 `CONFLICT` with `fieldErrors.phone` / `fieldErrors.email` when already registered; 422 field errors. (FR-ACC-01)"
+          },
+          "response": [
+            {
+              "name": "Account created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"otpRequestId\": \"0192f3a1-...\",\n    \"phone\": \"+2348031234567\",\n    \"expiresInSec\": 300\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Log in with email and password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('customerToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@kjtfoodie.test\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Returns `{ accessToken, user }` and sets the refresh cookie. Saves `customerToken`.\n\n**Errors:** 401 `INVALID_CREDENTIALS`; 403 `ACCOUNT_BANNED` / `ACCOUNT_SUSPENDED`."
+          },
+          "response": [
+            {
+              "name": "Signed in",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"user\": {\n      \"id\": \"usr_customer_ada\",\n      \"role\": \"customer\",\n      \"permissions\": [],\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Okafor\",\n      \"name\": \"Ada Okafor\",\n      \"email\": \"customer@kjtfoodie.test\",\n      \"phone\": \"+2348030000001\",\n      \"avatar\": null,\n      \"status\": \"active\",\n      \"phoneVerified\": true,\n      \"createdAt\": \"2025-09-24T10:00:00.000Z\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Log in as vendor (Bisi)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('vendorToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vendor@kjtfoodie.test\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Seeded vendor (Mama Put Kitchen). Saves `vendorToken`."
+          },
+          "response": []
+        },
+        {
+          "name": "Log in as rider (Tunde)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('riderToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rider@kjtfoodie.test\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Seeded rider. Saves `riderToken`."
+          },
+          "response": []
+        },
+        {
+          "name": "Log in as super admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('adminToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"super@kjtfoodie.test\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Seeded super admin (all permissions). Saves `adminToken`. Other admins: support@, finance@, dispatch@, onboarding@kjtfoodie.test."
+          },
+          "response": []
+        },
+        {
+          "name": "Request OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+2348030000001\",\n  \"purpose\": \"login\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "otp",
+                "request"
+              ]
+            },
+            "description": "`purpose` is `login` (default) or `verify` (resend after sign-up). Outside production the code is always `123456` and the SMS is only logged.\n\n**Errors:** 422 `fieldErrors.phone` for an invalid or unknown number; 403 blocked account; 429 rate limited."
+          },
+          "response": [
+            {
+              "name": "OTP sent",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/otp/request",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "otp",
+                    "request"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"otpRequestId\": \"0192f3a1-...\",\n    \"phone\": \"+2348030000001\",\n    \"expiresInSec\": 300\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('customerToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+2348030000001\",\n  \"code\": \"123456\",\n  \"purpose\": \"login\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/otp/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "otp",
+                "verify"
+              ]
+            },
+            "description": "Checks the code and starts a session (marks the phone verified). A code works once and stops after 5 wrong tries.\n\n**Errors:** 422 `fieldErrors.code`."
+          },
+          "response": []
+        },
+        {
+          "name": "Sign in with Google",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('customerToken', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credential\": \"<Google ID token from Google Identity Services>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/google",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            },
+            "description": "Verifies the Google ID token against `GOOGLE_CLIENT_ID`. Signs in the linked account, links an existing account with the same verified email, or creates a customer. (FR-ACC-05)\n\n**Errors:** 401 invalid token; 403 blocked account."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has access token and user', () => { pm.expect(body.data.accessToken).to.be.a('string'); pm.expect(body.data.user.id).to.be.a('string'); });",
+                  "pm.collectionVariables.set('token', body.data.accessToken);",
+                  "pm.collectionVariables.set('token', body.data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Uses the `kjt_refresh` cookie; rotates it and returns a new session. 401 means signed out (the cookie is cleared). Replaying an already-rotated token revokes that whole sign-in."
+          },
+          "response": []
+        },
+        {
+          "name": "Request password reset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"customer@kjtfoodie.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/password/forgot",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password",
+                "forgot"
+              ]
+            },
+            "description": "Sends a reset code by email or SMS (to whichever the identifier is). Always the same answer, so it never reveals whether an account exists."
+          },
+          "response": [
+            {
+              "name": "Sent",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/password/forgot",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "password",
+                    "forgot"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"sent\": true,\n    \"expiresInSec\": 600\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reset password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"customer@kjtfoodie.test\",\n  \"code\": \"123456\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password",
+                "reset"
+              ]
+            },
+            "description": "Sets the new password and signs the account out everywhere.\n\n**Errors:** 422 `fieldErrors.code` / `fieldErrors.password`."
+          },
+          "response": [
+            {
+              "name": "Changed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/password/reset",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "password",
+                    "reset"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reset\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Log out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revokes the refresh cookie's sign-in and clears the cookie. Works with an expired access token. Always 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "description": "The signed-in user and their saved addresses.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{customerToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "The signed-in user with fresh `permissions` (admins), `vendor { id, name, slug, approvalStatus, subscriptionStatus, planId, onboardingStep, logo }` (vendors) and `rider { id, approvalStatus, isOnline }` (riders). Any role."
+          },
+          "response": [
+            {
+              "name": "Customer",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "me"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"usr_customer_ada\",\n    \"role\": \"customer\",\n    \"permissions\": [],\n    \"firstName\": \"Ada\",\n    \"lastName\": \"Okafor\",\n    \"name\": \"Ada Okafor\",\n    \"email\": \"customer@kjtfoodie.test\",\n    \"phone\": \"+2348030000001\",\n    \"avatar\": null,\n    \"status\": \"active\",\n    \"phoneVerified\": true,\n    \"createdAt\": \"2025-09-24T10:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Edit profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Okafor\",\n  \"email\": \"customer@kjtfoodie.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "Send only the fields that change: `firstName`, `lastName`, `email`, `avatar` (URL from POST /uploads). 409 when the email belongs to another account."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete my account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "Customers only (403 for other roles). Removes personal data (name → \"Deleted user\", email / phone cleared, addresses deleted), keeps orders anonymised, signs out everywhere. NDPA 2023. **Destructive: run against a throwaway account.**"
+          },
+          "response": []
+        },
+        {
+          "name": "List addresses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json().data;",
+                  "if (list.length) pm.collectionVariables.set('addressId', list[0].id);",
+                  "pm.test('Default first', () => list.length && pm.expect(list[0].isDefault).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses"
+              ]
+            },
+            "description": "Customer only. Default first."
+          },
+          "response": []
+        },
+        {
+          "name": "Add address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('addressId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Home\",\n  \"line1\": \"12 Herbert Macaulay Way\",\n  \"area\": \"Yaba\",\n  \"city\": \"Lagos\",\n  \"state\": \"Lagos\",\n  \"lat\": 6.5095,\n  \"lng\": 3.3711,\n  \"directions\": \"Blue gate opposite the pharmacy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses"
+              ]
+            },
+            "description": "Customer only. The first address becomes the default; `isDefault: true` moves it. 422 field errors use the form names (`line1`, `area`, `city`, and `pin` for bad coordinates)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"directions\": \"Second gate, ask for Ada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/addresses/{{addressId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses",
+                "{{addressId}}"
+              ]
+            },
+            "description": "Send only the fields that change. 404 when it is not yours."
+          },
+          "response": []
+        },
+        {
+          "name": "Make address the default",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/addresses/{{addressId}}/default",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses",
+                "{{addressId}}",
+                "default"
+              ]
+            },
+            "description": "Customer only. 404 when it is not yours."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/addresses/{{addressId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses",
+                "{{addressId}}"
+              ]
+            },
+            "description": "Returns 200 `{ id, deleted: true }` (contract). If it was the default, the oldest remaining address becomes the default."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "The bell. Any signed-in role; each user sees only their own.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{customerToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "List notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?unread=true&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "unread",
+                  "value": "true"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filters: `type` (order, refund, social, review, subscription, payout, system; comma = any of), `unread=true`. Default sort `-createdAt`."
+          },
+          "response": []
+        },
+        {
+          "name": "Unread count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Count",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/unread-count",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "unread-count"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"count\": 3\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Mark one read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": "404 when it is not yours."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark all read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Done",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/read-all",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "read-all"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"done\": true\n  }\n}"
             }
           ]
         }

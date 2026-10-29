@@ -8,7 +8,7 @@ describe('Redis rate limit', () => {
     const app = express();
     app.use(requestId);
     // A fresh name per run so earlier runs' counters don't count
-    app.use(rateLimit({ name: `test-${Date.now()}`, limit: 2 }));
+    app.use(rateLimit({ name: `test-${Date.now()}`, limit: 2, enabled: true }));
     app.get('/', (req, res) => res.json({ ok: true }));
     app.use(errorHandler);
 

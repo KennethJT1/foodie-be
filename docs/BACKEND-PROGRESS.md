@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-10-29 · Current phase: **6** · Next up: **Phase 6 — Authentication, profile, addresses** (mount `/notifications` behind `authenticate`; add the `notifications.user_id` FK; confirm CI is green on the first push)
+Last updated: 2026-10-29 · Current phase: **7** · Next up: **Phase 7 — Admin roles, permissions, admin users** (move `DEFAULT_ROLE_PERMISSIONS` into the roles table; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -27,8 +27,8 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 2 | Core plumbing aligned to the handoff | 1 | 1/1 | ✅ |
 | 3 | Database foundation and shared helpers | — | — | ✅ |
 | 4 | List query layer | — | — | ✅ |
-| 5 | Redis, queues, notifications | 4 | 0/4 (built; mounted in 6) | ✅ |
-| 6 | Authentication, profile, addresses | 17 | 0/17 | ⬜ |
+| 5 | Redis, queues, notifications | 4 | 4/4 | ✅ |
+| 6 | Authentication, profile, addresses | 17 | 17/17 | ✅ |
 | 7 | Admin roles, permissions, admin users | 6 | 0/6 | ⬜ |
 | 8 | Uploads and audit log | 2 | 0/2 | ⬜ |
 | 9 | Settings, banks, reference data, seeder core | 4 | 0/4 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **1/162** | |
+| | **Total** | **162** | **22/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -57,7 +57,11 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Server + graceful shutdown | `src/server.js` | Built (HTTP only; no Socket.IO yet); closes queues, Redis, DB |
 | Redis | `src/config/redis.js` | ioredis via `REDIS_URL` (lazy connect); every key under `REDIS_KEY_PREFIX` (default `kjt:<NODE_ENV>`); `closeRedis()` |
 | Queues | `src/core/queue/*`, `src/worker.js`, `src/scheduler.js` | `QUEUES` definitions (only `notifications` so far: concurrency 20, 5 attempts, exponential 10 s); `getQueue` / `addJob` / `jobId()`; `createWorker` routes by job name (unknown name → `UnrecoverableError`); worker process with graceful shutdown; scheduler registers `SCHEDULES` (empty) |
-| Notifications | `src/modules/notifications/*`, `src/db/models/notification.model.js`, migration `20261029100000-create-notifications.cjs` | Table + model; service: list (`type`, `unread=true`, scoped), unread count, mark read (404 if not yours), read all; `notify(userId, payload, { transaction, sms, email })`; `notifyLater()`; jobs `sms.send`, `email.send`, `inapp.create`. Routes built, **not mounted** (need `authenticate`) |
+| Notifications | `src/modules/notifications/*`, `src/db/models/notification.model.js`, migration `20261029100000-create-notifications.cjs` | Table + model; service: list (`type`, `unread=true`, scoped), unread count, mark read (404 if not yours), read all; `notify(userId, payload, { transaction, sms, email })`; `notifyLater()`; jobs `sms.send`, `email.send`, `inapp.create`. Mounted at `/notifications` behind `authenticate` |
+| Auth | `src/core/auth/*`, `src/core/middlewares/auth.js`, `src/modules/auth/*` | JWT access token (HS256, 15 min, `sub` + `role`); `authenticate` reloads the user every request (banned / suspended → 403 at once), `requireRole(...)`; refresh token = random 48 bytes in `kjt_refresh` cookie (httpOnly, `Path=/api/v1/auth`, SameSite=Lax, 30 days), stored as keyed SHA-256, rotated every refresh, family revoked on reuse (15 s grace for parallel tabs); OTPs hashed, 5 tries, single use, `123456` outside production; bcrypt (12; 4 in tests); Google ID token verify (`google.verifyIdToken`, replaceable in tests); per-route 5/min limits + OTP 5 per 10 min per phone; `DEFAULT_ROLE_PERMISSIONS` (until phase 7) |
+| Users / account | `src/modules/users/*`, `src/modules/addresses/*` | `toUserDto` (contract `User` with `permissions`, `vendor {…}`, `rider {…}`); `/me` get / patch / delete (anonymise + soft delete + revoke sessions); addresses CRUD + default, default first |
+| Tables | migrations `20261029110000`–`110500` | `users` (paranoid), minimal `vendors` and `riders` (phases 10–12 add columns), `refresh_tokens`, `otp_codes`, `addresses`; FK `notifications.user_id → users` |
+| Seed | `src/db/seed/steps/users.js`, `src/db/seed/data/cities.js` | 11 demo accounts (handoff 8.2, password `password123`), `ven_mama_put` / `ven_expired` / `ven_new`, `rid_tunde` / `rid_new`, Ada's 2 addresses, 70 customers `usr_customer_001…070` (3 suspended, 2 banned) with one address each. Dev DB migrated and seeded |
 | SMS / email | `src/integrations/termii/termii.client.js`, `src/integrations/email/email.client.js` | Termii in production, log mode elsewhere; email log mode only (production provider not chosen) |
 | Env validation | `src/config/env.js` | Built (Zod). `.env.example` lists every later var; Redis, Termii and email are validated now, the rest join the schema in their phases |
 | Logger | `src/config/logger.js` | Built (pino) |
@@ -73,7 +77,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | API router | `src/routes.js` | Empty; modules mount here |
 | Seeder | `src/db/seed/index.js` | `npm run seed`: refuses production, wipes all tables, runs `SEED_STEPS` (empty) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
-| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (191 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
+| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (249 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
 
 ## Phase checklists
@@ -132,35 +136,35 @@ An endpoint counts as done only when it matches the contract, has integration te
 - [x] `notifications` queue: `sms.send`, `email.send`, `inapp.create`
 - [x] `notifications` table + `notify()` helper
 - [x] `/health/ready` checks Redis
-- Endpoints (service + routes built and tested at service level; mounted and HTTP-tested in phase 6, counted done then):
-  - [ ] `GET /notifications`
-  - [ ] `GET /notifications/unread-count`
-  - [ ] `POST /notifications/{id}/read`
-  - [ ] `POST /notifications/read-all`
+- Endpoints (mounted and HTTP-tested in phase 6):
+  - [x] `GET /notifications`
+  - [x] `GET /notifications/unread-count`
+  - [x] `POST /notifications/{id}/read`
+  - [x] `POST /notifications/read-all`
 
-### Phase 6 — Authentication, profile, addresses ⬜
+### Phase 6 — Authentication, profile, addresses ✅
 
-- [ ] Tables: `users`, `refresh_tokens`, `otp_codes`, `addresses`
-- [ ] `authenticate`, `requireRole`; refresh cookie rotation + reuse detection
-- [ ] Seed: 11 demo accounts, Ada's 2 addresses, ~70 customers (some suspended / banned)
+- [x] Tables: `users`, `refresh_tokens`, `otp_codes`, `addresses`
+- [x] `authenticate`, `requireRole`; refresh cookie rotation + reuse detection
+- [x] Seed: 11 demo accounts, Ada's 2 addresses, ~70 customers (some suspended / banned)
 - Endpoints:
-  - [ ] `POST /auth/register`
-  - [ ] `POST /auth/login`
-  - [ ] `POST /auth/otp/request`
-  - [ ] `POST /auth/otp/verify`
-  - [ ] `POST /auth/google`
-  - [ ] `POST /auth/refresh`
-  - [ ] `POST /auth/logout`
-  - [ ] `POST /auth/password/forgot`
-  - [ ] `POST /auth/password/reset`
-  - [ ] `GET /me`
-  - [ ] `PATCH /me`
-  - [ ] `DELETE /me`
-  - [ ] `GET /addresses`
-  - [ ] `POST /addresses`
-  - [ ] `PATCH /addresses/{id}`
-  - [ ] `DELETE /addresses/{id}`
-  - [ ] `POST /addresses/{id}/default`
+  - [x] `POST /auth/register`
+  - [x] `POST /auth/login`
+  - [x] `POST /auth/otp/request`
+  - [x] `POST /auth/otp/verify`
+  - [x] `POST /auth/google`
+  - [x] `POST /auth/refresh`
+  - [x] `POST /auth/logout`
+  - [x] `POST /auth/password/forgot`
+  - [x] `POST /auth/password/reset`
+  - [x] `GET /me`
+  - [x] `PATCH /me`
+  - [x] `DELETE /me`
+  - [x] `GET /addresses`
+  - [x] `POST /addresses`
+  - [x] `PATCH /addresses/{id}`
+  - [x] `DELETE /addresses/{id}`
+  - [x] `POST /addresses/{id}/default`
 
 ### Phase 7 — Admin roles, permissions, admin users ⬜
 
@@ -439,6 +443,17 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-10-29 | `notifications.user_id` has no FK yet; the phase 6 users migration adds it | `users` doesn't exist until phase 6 |
 | 2026-10-29 | Rate limiter uses `passOnStoreError` | A Redis outage degrades to "no rate limit" instead of taking the API down |
 | 2026-10-29 | **Open:** production email provider not chosen; `email.send` throws in production until one is wired in (`EMAIL_API_KEY` is reserved for it) | No provider named in the docs; project owner to decide before go-live |
+| 2026-10-29 | `users` stores `first_name` / `last_name` (contract), not `full_name` (Schema doc); `admin_role` is a slug column until phase 7 adds the roles table | Contract `User` has firstName / lastName / adminRole |
+| 2026-10-29 | Minimal `vendors` / `riders` tables created in phase 6 (approval, onboarding step, subscription status, plan id, online) | Sign-up must create the draft profile and `/me` must return `vendor {…}` / `rider {…}` now; phases 10–12 add the remaining columns |
+| 2026-10-29 | Duplicate phone / email on register and PATCH /me → **409 `CONFLICT`** with `fieldErrors` (contract), not the mock's 422 | Contract wins; the frontend `Form` puts `fieldErrors` on the inputs for any status |
+| 2026-10-29 | `DELETE /addresses/{id}` returns **200 `{ id, deleted: true }`** | Contract and mock both say 200 (exception to the handoff's "DELETE → 204") |
+| 2026-10-29 | `/auth/logout` needs no access token (the refresh cookie identifies the session) and is always 204 | Logout must work when the access token has expired |
+| 2026-10-29 | `authenticate` refuses banned **and** suspended users on every request (403 `ACCOUNT_BANNED` / `ACCOUNT_SUSPENDED`), not just at login / refresh | Blocks take effect at once instead of up to 15 minutes later |
+| 2026-10-29 | `DELETE /me` anonymises (name "Deleted user", email / phone / password / Google id cleared), deletes addresses, revokes sessions, then soft-deletes the user | NDPA; orders (later phases) keep pointing at the anonymised row |
+| 2026-10-29 | JWT secrets must be 32+ characters only in production (dev `.env` has shorter ones) | Don't break existing dev config; production is strict |
+| 2026-10-29 | `JWT_REFRESH_TTL` is read as days (`30d`) to match the existing `.env` | Owner's `.env` already used that key |
+| 2026-10-29 | `RATE_LIMITS=false` in tests (tests/setup/env.js); auth limits are per route (`authRateLimit('login')`) | One shared counter across all auth routes would lock users out after a normal sign-in flow |
+| 2026-10-29 | Test reset uses one multi-statement query on a test-only connection; `DB_TEST_HOST/PORT/USER/PASS/SSL` can point tests at a local MySQL; Jest timeout 60 s | Remote TiDB round trips (~0.45 s) made per-test resets take ~5 s; the full suite takes ~7 min remotely |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
 ## Contract questions for the frontend
@@ -448,6 +463,9 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Endpoint | Question |
 | --- | --- | --- |
 | 2026-10-29 | `POST /auth/register` 409 | Contract gives no `error.code` for a duplicate phone/email. The backend sends `CONFLICT` (as the mock's default) with `fieldErrors.phone` / `fieldErrors.email`. Confirm, or name a code |
+| 2026-10-29 | `POST /auth/register` duplicate | The mock returns 422 `VALIDATION_ERROR` with `fieldErrors.phone`; the contract says 409. Backend follows the contract (409 `CONFLICT` + `fieldErrors`). Please align the mock |
+| 2026-10-29 | `POST /auth/logout` | Contract inherits `bearerAuth`; backend accepts it without a token (cookie only). Suggest `security: []` in the contract |
+| 2026-10-29 | `GET /me` | Backend also returns `phoneVerified` and `createdAt` (not in the `User` schema); please add them or say if unwanted |
 | 2026-10-29 | `POST /auth/login` 401 | The mock sends `INVALID_CREDENTIALS`, which the handoff error table does not list. Backend sends it; please add it to the handoff table |
 
 ## Session log
@@ -455,6 +473,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Phase | What was done |
 | --- | --- | --- |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
+| 2026-10-29 | 6 | Auth (register, password, OTP, Google, refresh rotation with reuse detection, logout, password reset), `/me` get / patch / delete, addresses, notifications mounted; users / vendors / riders / tokens / OTP / addresses tables; seed slice (81 users); Postman Auth, Account, Notifications folders; 249 tests green; dev DB migrated + seeded; verified end to end against the running server. |
 | 2026-10-29 | 5 | Redis (managed, TLS), Redis rate-limit store + auth/OTP limiters, BullMQ queue/worker factories, `worker.js` and `scheduler.js` (smoke-tested as real processes), notifications table/model/service/jobs, `notify()`, readiness checks Redis. Tests: SMS/email in log mode, retry with backoff, unknown job fails without retry, duplicate job ids, notify after commit / nothing on rollback, 429 from the Redis limiter (191 tests green). Dev DB migrated. |
 | 2026-10-29 | 4 | List query layer: `buildListQuery`, `paginate`, cursor helpers; unit tests for every operator, clamp, max limit, ignored params, sort whitelist, scope override; MySQL integration test (174 tests green). |
 | 2026-10-29 | 3 | Database foundation: model loader, ID helper, transaction + row-lock helpers (concurrency test proves only one of two racing updates wins), migration helpers, shared utils with unit tests (125 tests green). |

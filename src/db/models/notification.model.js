@@ -19,6 +19,8 @@ export default (sequelize, DataTypes) => {
     { tableName: 'notifications' },
   );
 
-  // Notification.belongsTo(User) is added with the users model in phase 6
+  Notification.associate = (models) => {
+    Notification.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
+  };
   return Notification;
 };

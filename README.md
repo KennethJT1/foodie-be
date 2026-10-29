@@ -27,6 +27,7 @@ GRANT ALL PRIVILEGES ON kjt_foodie_test.* TO 'kjt_foodie'@'localhost';
 ```
 
 A managed MySQL (e.g. TiDB Cloud) also works: set its host, port and user in `.env` and `DB_SSL=true`.
+Tests are much faster against a local MySQL: keep `DB_*` on the managed server and set `DB_TEST_HOST`, `DB_TEST_USER`, `DB_TEST_PASS` and `DB_TEST_SSL=false` for the local one.
 
 ### 2. Configure and start
 

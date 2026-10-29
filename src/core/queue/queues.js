@@ -42,4 +42,6 @@ export const addJob = (queueName, jobName, data, options) => getQueue(queueName)
 export const closeQueues = async () => {
   await Promise.all([...queues.values()].map((queue) => queue.close()));
   queues.clear();
+  // closeRedis() may close it next; a later getQueue() must open a fresh one
+  connection = undefined;
 };

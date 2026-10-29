@@ -1,0 +1,51 @@
+// Service cities with weights for picking where generated people live (same as the frontend mock)
+export const CITIES = [
+  {
+    city: 'Lagos',
+    state: 'Lagos',
+    lat: 6.5244,
+    lng: 3.3792,
+    weight: 5,
+    areas: ['Yaba', 'Lekki Phase 1', 'Ikeja GRA', 'Surulere', 'Victoria Island', 'Ikoyi', 'Ajah', 'Gbagada'],
+  },
+  {
+    city: 'Abuja',
+    state: 'FCT',
+    lat: 9.0765,
+    lng: 7.3986,
+    weight: 3,
+    areas: ['Wuse 2', 'Garki', 'Maitama', 'Gwarinpa', 'Jabi', 'Asokoro'],
+  },
+  {
+    city: 'Port Harcourt',
+    state: 'Rivers',
+    lat: 4.8156,
+    lng: 7.0498,
+    weight: 2,
+    areas: ['GRA Phase 2', 'Rumuola', 'Trans Amadi', 'D-Line'],
+  },
+  {
+    city: 'Ibadan',
+    state: 'Oyo',
+    lat: 7.3775,
+    lng: 3.947,
+    weight: 1,
+    areas: ['Bodija', 'Ring Road', 'Dugbe', 'Challenge'],
+  },
+  {
+    city: 'Enugu',
+    state: 'Enugu',
+    lat: 6.4584,
+    lng: 7.5464,
+    weight: 1,
+    areas: ['Independence Layout', 'New Haven', 'GRA'],
+  },
+  {
+    city: 'Kano',
+    state: 'Kano',
+    lat: 12.0022,
+    lng: 8.592,
+    weight: 1,
+    areas: ['Nassarawa GRA', 'Sabon Gari', 'Tarauni'],
+  },
+];

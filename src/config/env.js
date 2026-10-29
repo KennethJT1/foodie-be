@@ -40,6 +40,32 @@ const envSchema = z.object({
   // Defaults to kjt:<NODE_ENV>
   REDIS_KEY_PREFIX: z.string().min(1).optional(),
 
+  // Production needs 32+ random characters (`openssl rand -hex 48`), checked below
+  JWT_ACCESS_SECRET: z.string().min(1),
+  JWT_REFRESH_SECRET: z.string().min(1),
+  JWT_ACCESS_TTL: z.string().default('15m'),
+  // Refresh-token lifetime in days, written like 30d
+  JWT_REFRESH_TTL: z
+    .string()
+    .regex(/^\d+d$/, 'Write it in days, like 30d')
+    .default('30d')
+    .transform((value) => Number.parseInt(value, 10)),
+  COOKIE_NAME: z.string().min(1).default('kjt_refresh'),
+  COOKIE_DOMAIN: z.string().optional(),
+  // Secure cookies need HTTPS; defaults to on in production
+  COOKIE_SECURE: z.stringbool().optional(),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+  // Off only in automated tests (tests/setup/env.js); the rate-limit tests turn it back on
+  RATE_LIMITS: z.stringbool().default(true),
+  // bcrypt cost; tests lower it to keep the suite fast
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
+  // Accepted as every OTP outside production (handoff: demo OTP 123456)
+  DEMO_OTP: z
+    .string()
+    .regex(/^\d{6}$/)
+    .default('123456'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+
   // SMS goes out only in production; elsewhere it is logged (demo OTP is 123456)
   TERMII_API_KEY: z.string().optional(),
   TERMII_SENDER_ID: z.string().min(1).default('KJTFoodie'),
@@ -48,7 +74,15 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().min(1).default('KJT Foodie <no-reply@kjtfoodie.com>'),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = envSchema
+  .superRefine((value, ctx) => {
+    if (value.NODE_ENV !== 'production') return;
+    for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET']) {
+      if (value[key].length < 32)
+        ctx.addIssue({ code: 'custom', path: [key], message: 'Use at least 32 random characters' });
+    }
+  })
+  .safeParse(process.env);
 
 // Refuse to boot with a missing or invalid variable
 if (!parsed.success) {

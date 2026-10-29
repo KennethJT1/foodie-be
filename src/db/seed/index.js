@@ -2,11 +2,14 @@
 // (05-backend-handoff.md, section 8). Each phase adds its slice to SEED_STEPS.
 import { env } from '../../config/env.js';
 import { logger } from '../../config/logger.js';
+import { createSeededFaker } from '../../core/utils/random.js';
 import { connectDatabase, sequelize } from '../index.js';
 import { truncateAllTables } from '../wipe.js';
+import { users } from './steps/users.js';
 
-// Run in order; each step is `async ({ sequelize, transaction }) => void`
-const SEED_STEPS = [];
+// Run in order; each step is `async ({ sequelize, transaction, faker, now }) => void`. They share
+// one seeded Faker, so adding a step at the end never changes the data of the steps before it.
+const SEED_STEPS = [users];
 
 const run = async () => {
   // The demo world replaces real data; production gets its own reference-data seed (phase 22)
@@ -16,9 +19,11 @@ const run = async () => {
   const wiped = await truncateAllTables(sequelize);
   logger.info(`Wiped ${wiped.length} tables in ${sequelize.config.database}`);
 
+  const faker = createSeededFaker();
+  const now = Date.now();
   await sequelize.transaction(async (transaction) => {
     for (const step of SEED_STEPS) {
-      await step({ sequelize, transaction });
+      await step({ sequelize, transaction, faker, now });
       logger.info(`Seeded ${step.name}`);
     }
   });

@@ -35,8 +35,23 @@ if (!testDatabase.endsWith('_test')) {
   throw new Error(`DB_NAME_TEST must end in "_test" (got "${testDatabase}")`);
 }
 
+// Tests may use another server (e.g. a local MySQL while dev points at a managed one): DB_TEST_*
+const env = process.env;
+const testServer = {
+  ...(env.DB_TEST_HOST && { host: env.DB_TEST_HOST }),
+  ...(env.DB_TEST_PORT && { port: Number(env.DB_TEST_PORT) }),
+  ...(env.DB_TEST_USER && { username: env.DB_TEST_USER }),
+  ...(env.DB_TEST_PASS !== undefined && { password: env.DB_TEST_PASS }),
+};
+const testSsl =
+  env.DB_TEST_SSL === undefined
+    ? base.dialectOptions.ssl
+    : env.DB_TEST_SSL === 'true'
+      ? { minVersion: 'TLSv1.2', rejectUnauthorized: true }
+      : undefined;
+
 module.exports = {
   development: base,
-  test: { ...base, database: testDatabase },
+  test: { ...base, ...testServer, database: testDatabase, dialectOptions: { ...base.dialectOptions, ssl: testSsl } },
   production: { ...base, pool: { max: 20, min: 2, acquire: 30000, idle: 10000 } },
 };

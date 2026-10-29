@@ -10,9 +10,9 @@ export const ERROR_CODES = {
   FORBIDDEN: { status: 403, message: "You don't have access to do that." },
   ACCOUNT_BANNED: {
     status: 403,
-    message: 'This account has been banned. Contact support if you think this is a mistake.',
+    message: 'This account has been closed. Contact support if you think this is a mistake.',
   },
-  ACCOUNT_SUSPENDED: { status: 403, message: 'This account is suspended for now. Contact support to find out more.' },
+  ACCOUNT_SUSPENDED: { status: 403, message: 'This account is suspended. Contact support to restore it.' },
 
   NOT_FOUND: { status: 404, message: "We couldn't find that." },
 

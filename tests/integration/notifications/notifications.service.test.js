@@ -11,6 +11,7 @@ import {
   unreadCount,
 } from '../../../src/modules/notifications/notifications.service.js';
 import { resetDatabase } from '../../helpers/db.js';
+import { createUser } from '../../helpers/factories.js';
 
 const { Notification } = models;
 const ADA = 'usr_customer_ada';
@@ -57,6 +58,8 @@ const seed = () =>
 describe('notifications service', () => {
   beforeEach(async () => {
     await resetDatabase();
+    await createUser({ id: ADA });
+    await createUser({ id: BISI, role: 'vendor' });
     await seed();
   });
 
@@ -114,7 +117,10 @@ describe('notifications service', () => {
 describe('notify', () => {
   const queue = () => getQueue('notifications');
 
-  beforeEach(() => resetDatabase());
+  beforeEach(async () => {
+    await resetDatabase();
+    await createUser({ id: ADA });
+  });
 
   it('queues SMS only after the transaction commits', async () => {
     const notification = await withTransaction((transaction) =>
