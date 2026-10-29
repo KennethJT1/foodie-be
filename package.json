@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/KennethJT1/foodie-be#readme",
   "dependencies": {
+    "@faker-js/faker": "^10.6.0",
     "cloudinary": "^2.11.0",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
@@ -42,6 +43,7 @@
     "pino-http": "^11.0.0",
     "sequelize": "^6.37.8",
     "swagger-ui-express": "^5.0.1",
+    "uuid": "^14.0.3",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },

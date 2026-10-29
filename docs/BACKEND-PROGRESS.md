@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-10-29 · Current phase: **3** · Next up: **Phase 3 — Database foundation and shared helpers** (and confirm CI is green on the first push)
+Last updated: 2026-10-29 · Current phase: **4** · Next up: **Phase 4 — List query layer** (and confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -25,7 +25,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | --- | --- | --- | --- | --- |
 | 1 | Project setup and tooling | — | — | ✅ |
 | 2 | Core plumbing aligned to the handoff | 1 | 1/1 | ✅ |
-| 3 | Database foundation and shared helpers | — | — | 🟡 |
+| 3 | Database foundation and shared helpers | — | — | ✅ |
 | 4 | List query layer | — | — | ⬜ |
 | 5 | Redis, queues, notifications | 4 | 0/4 | ⬜ |
 | 6 | Authentication, profile, addresses | 17 | 0/17 | ⬜ |
@@ -62,12 +62,13 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Responses | `src/core/http/respond.js`, `asyncHandler.js` | `ok`, `created`, `noContent` (204), `paginated` |
 | Middlewares | `src/core/middlewares/*` | errorHandler (body-parser → 400/413, Sequelize → 409/422), notFound, rateLimit (in-memory; health exempt), requestId, validate (Zod → `fieldErrors`). CORS: 5173/5174/4173, `GET POST PATCH DELETE`, `Authorization, Content-Type` |
 | Health | `src/modules/health/health.routes.js`, `src/routes.js` | `GET /api/v1/health` (contract) + `/health`, `/health/ready` at the root |
-| Database | `src/db/index.js`, `src/config/database.cjs`, `.sequelizerc`, `src/db/wipe.js` | Sequelize connects; test config uses `DB_NAME_TEST` (must end `_test`); `truncateAllTables()`; no models or migrations yet |
+| Database | `src/db/{sequelize,index,id,transaction,wipe}.js`, `src/db/models/index.js`, `src/db/migrationHelpers.cjs`, `src/config/database.cjs` | Sequelize (`underscored`, timestamps, UTC); loader for `src/db/models/*.model.js` + `associate()`; `idColumn()` / `newId()` (VARCHAR(64), UUID v7); `withTransaction` + `lockForUpdate`; migration column helpers (`id`, `foreignId`, `timestamps`, `softDelete`, `kobo`); `truncateAllTables()`. No real models or migrations yet |
+| Utils | `src/core/utils/*` | `money`, `phone` (`normalisePhone`), `slug` (`slugify`, `uniqueSlug`), `dates` (Lagos days), `geo` (`haversineM`), `codes` (`orderCode`, `deliveryCode`, `uniqueCode`), `random` (seeded Faker `en_NG`, `weighted`) |
 | Cloudinary | `src/integrations/cloudinary/cloudinary.client.js` | Client configured, no upload endpoint |
 | API router | `src/routes.js` | Empty; modules mount here |
 | Seeder | `src/db/seed/index.js` | `npm run seed`: refuses production, wipes all tables, runs `SEED_STEPS` (empty) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
-| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (66 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
+| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (125 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
 
 ## Phase checklists
@@ -103,14 +104,14 @@ An endpoint counts as done only when it matches the contract, has integration te
 - Endpoints:
   - [x] `GET /api/v1/health` (contract path; keep root `/health` + `/health/ready` too)
 
-### Phase 3 — Database foundation and shared helpers 🟡
+### Phase 3 — Database foundation and shared helpers ✅
 
 - [x] Sequelize instance and connection
-- [ ] Global options (`underscored`, UTC) and model loader with `associate()`
-- [ ] ID helper (string PK `VARCHAR(64)`, UUID v7, fixed seed IDs allowed)
-- [ ] Utils + unit tests: money, phone → E.164, slug (unique), Lagos day, haversine, order code, delivery code, seeded RNG
-- [ ] `withTransaction` + row-lock pattern
-- [ ] `db:migrate` and `db:migrate:undo:all` clean on empty DB
+- [x] Global options (`underscored`, UTC) and model loader with `associate()`
+- [x] ID helper (string PK `VARCHAR(64)`, UUID v7, fixed seed IDs allowed)
+- [x] Utils + unit tests: money, phone → E.164, slug (unique), Lagos day, haversine, order code, delivery code, seeded RNG
+- [x] `withTransaction` + row-lock pattern
+- [x] `db:migrate` and `db:migrate:undo:all` clean on empty DB
 
 ### Phase 4 — List query layer ⬜
 
@@ -417,6 +418,12 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-10-29 | `/health/ready` added to `docs/api/openapi.yaml` (server root); `/api/v1/health` returns `status`, `time` and `uptime` | Merged the retired `docs/openapi/health.yaml` into the master contract |
 | 2026-10-29 | Default error messages copied from the frontend mock (`foodie-fe/src/mocks/utils/respond.js`); each specific code got its own friendly default | Same wording whether the frontend runs on mocks or the real API |
 | 2026-10-29 | Test DB name comes from `DB_NAME_TEST` (default `<DB_NAME>_test`) and must end in `_test`; `npm test` creates + migrates it in Jest `globalSetup`. Jest `testTimeout` 20 s | Tests truncate tables, so they must never hit a real DB. The current `.env` points at TiDB Cloud, where the first TLS connect can take >5 s |
+| 2026-10-29 | Models live in `src/db/models/*.model.js` (factory `(sequelize, DataTypes) => Model`); the Sequelize instance moved to `src/db/sequelize.js`; `src/db/index.js` re-exports everything | Avoids a circular import between the instance and the loader |
+| 2026-10-29 | Migrations are `.cjs` (the package is ESM; sequelize-cli `require()`s them) and use `src/db/migrationHelpers.cjs` for `id` / FK / timestamps / soft delete / kobo columns. Timestamps are `DATETIME(3)` | Checked with a throwaway migration: migrate, FK `RESTRICT`/`CASCADE`, undo-all all clean |
+| 2026-10-29 | `truncateAllTables()` uses `DELETE`, not `TRUNCATE` | `TRUNCATE` is DDL: slow on TiDB and an implicit commit on MySQL; IDs are strings so there are no counters to reset |
+| 2026-10-29 | `normalisePhone` uses the frontend's exact rule (10 national digits starting 7/8/9) | A stricter backend rule would reject numbers the form accepted |
+| 2026-10-29 | Order codes use `A–Z 2–9` without look-alikes (no 0/O, 1/I/L); slugs drop apostrophes and accents (`Tolu's Pot` → `tolus-pot`) | People read codes aloud; nicer URLs. Nothing in the frontend depends on the mock's slug for apostrophes |
+| 2026-10-29 | Tests against the current `.env` DB (TiDB Cloud, Tokyo) take ~70 s because each query is a ~0.5 s round trip. For a fast loop point `DB_*` at the local MySQL 8 (README steps) | Network latency, not code |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
 ## Contract questions for the frontend
@@ -433,4 +440,5 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Phase | What was done |
 | --- | --- | --- |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
+| 2026-10-29 | 3 | Database foundation: model loader, ID helper, transaction + row-lock helpers (concurrency test proves only one of two racing updates wins), migration helpers, shared utils with unit tests (125 tests green). |
 | 2026-10-29 | 1–2 | Finished phases 1 and 2: ESLint/Prettier, Jest + Supertest (66 tests green against `kjt_foodie_test`), CI workflow, README, full `.env.example`, seed placeholder + `truncateAllTables`; error codes/classes/messages aligned with the handoff, body-parser 400/413, `noContent`, CORS, `GET /api/v1/health`, Swagger on `docs/api/openapi.yaml` (`docs/openapi/` removed), Postman updated. |

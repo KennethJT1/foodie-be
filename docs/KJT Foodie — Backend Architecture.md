@@ -75,7 +75,7 @@ kjt-foodie-api/
 │     ├─ orders/  payments/  refunds/  riders/  deliveries/  tracking/
 │     └─ reviews/  support/  notifications/  reports/  settings/  admin/
 ├─ tests/                         # unit/ integration/ (mirrors modules)
-├─ docs/openapi/                  # OpenAPI YAML per module
+├─ docs/api/openapi.yaml          # the API contract (master copy)
 ├─ .sequelizerc
 └─ .env.example
 ```
