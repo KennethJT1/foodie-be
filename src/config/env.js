@@ -33,6 +33,19 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
   CLOUDINARY_UPLOAD_FOLDER: z.string().min(1).default('kjt-foodie'),
+
+  // redis:// locally, rediss:// (TLS) for managed Redis
+  REDIS_URL: z.string().regex(/^rediss?:\/\//, 'Must start with redis:// or rediss://'),
+  // Namespaces every key (queues, rate limits, cache) so dev and test can share one Redis.
+  // Defaults to kjt:<NODE_ENV>
+  REDIS_KEY_PREFIX: z.string().min(1).optional(),
+
+  // SMS goes out only in production; elsewhere it is logged (demo OTP is 123456)
+  TERMII_API_KEY: z.string().optional(),
+  TERMII_SENDER_ID: z.string().min(1).default('KJTFoodie'),
+  TERMII_BASE_URL: z.url().default('https://api.ng.termii.com'),
+  EMAIL_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().min(1).default('KJT Foodie <no-reply@kjtfoodie.com>'),
 });
 
 const parsed = envSchema.safeParse(process.env);

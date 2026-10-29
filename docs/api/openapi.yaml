@@ -95,7 +95,7 @@ paths:
       security: []
       summary: Readiness check (server root, for load balancers)
       description: |
-        200 when MySQL is reachable, 503 otherwise. Load balancers send traffic only to ready
+        200 when MySQL and Redis are reachable, 503 otherwise. Load balancers send traffic only to ready
         instances. `GET /health` (liveness) is also served at the server root. Not rate limited.
       responses:
         '200':
@@ -114,6 +114,7 @@ paths:
                             type: object
                             properties:
                               mysql: { type: string, example: up }
+                              redis: { type: string, example: up }
         '503':
           description: A dependency is down (error.code INTERNAL_ERROR)
           content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

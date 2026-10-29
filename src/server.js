@@ -1,6 +1,8 @@
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
+import { closeRedis } from './config/redis.js';
 import app from './app.js';
+import { closeQueues } from './core/queue/index.js';
 import { connectDatabase, sequelize } from './db/index.js';
 import './integrations/cloudinary/cloudinary.client.js';
 
@@ -26,8 +28,10 @@ const start = async () => {
       process.exit(1);
     }, SHUTDOWN_TIMEOUT_MS).unref();
 
-    // Stop accepting new requests, let in-flight ones finish, then close the DB pool
+    // Stop accepting new requests, let in-flight ones finish, then close Redis and the DB pool
     server.close(async () => {
+      await closeQueues();
+      await closeRedis();
       await sequelize.close();
       logger.info('Shutdown complete');
       process.exit(0);

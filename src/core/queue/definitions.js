@@ -1,0 +1,13 @@
+// Queues and their retry policy (Backend Architecture, section 6). Later phases add theirs here.
+export const QUEUES = {
+  notifications: {
+    concurrency: 20,
+    jobOptions: { attempts: 5, backoff: { type: 'exponential', delay: 10_000 } },
+  },
+};
+
+// Kept around for Bull Board and debugging, then trimmed
+export const DEFAULT_JOB_OPTIONS = {
+  removeOnComplete: { count: 1000 },
+  removeOnFail: { count: 5000 },
+};

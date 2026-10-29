@@ -288,7 +288,7 @@ Slow, retryable or timed work runs in a separate worker process fed by named Bul
 
 ### Delayed jobs that drive the order flow
 
-- When an order is paid: `order.autoReject` is added with a delay equal to the admin-set acceptance limit (e.g. 5 min) and job ID `autoReject:<orderId>`. If the vendor accepts first, the job is removed.
+- When an order is paid: `order.autoReject` is added with a delay equal to the admin-set acceptance limit (e.g. 5 min) and job ID `autoReject-<orderId>` (built with `jobId('autoReject', orderId)`; BullMQ does not allow `:` in custom ids). If the vendor accepts first, the job is removed.
 - When an order is ready: `order.offerToRider` picks the nearest online rider (Redis GEO search) and adds `offer.timeout` (30 s). On timeout or decline, the next rider is offered. After N failures, Dispatch admins are alerted.
 - When a refund request is opened: a delayed `refund.deadline` job applies the admin-configured action if the vendor has not responded.
 
@@ -315,7 +315,7 @@ export const queues = {
 
 // modules/orders/orders.jobs.js — producer
 export const scheduleAutoReject = (order, minutes) =>
-  queues.dispatch.add('order.autoReject', { orderId: order.id }, { delay: minutes * 60_000, jobId: `autoReject:${order.id}` });
+  queues.dispatch.add('order.autoReject', { orderId: order.id }, { delay: minutes * 60_000, jobId: jobId('autoReject', order.id) });
 
 // worker.js — one Worker per queue, processors looked up by job name
 new Worker('dispatch', (job) => processors.dispatch[job.name](job.data), { connection, concurrency: 10 });

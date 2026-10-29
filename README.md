@@ -3,6 +3,8 @@
 Express backend for the KJT Foodie marketplace (customers, vendors, riders, admins).
 Node 20+, ESM, MySQL 8 (Sequelize), Redis 7 (from phase 5). No Docker.
 
+Google playground: [developers.google.com/oauthplayground/?iss=https%3A%2F%2Faccounts.google.com&amp;code=4%2F0AXlqoi4moQr656HoF2h-F7d2qH_UQIrm9gszrxHburP10mAh6G-G_mluju6czC85R9RcRA&amp;scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&amp;authuser=0&amp;prompt=consent](https://developers.google.com/oauthplayground/?iss=https%3A%2F%2Faccounts.google.com&code=4%2F0AXlqoi4moQr656HoF2h-F7d2qH_UQIrm9gszrxHburP10mAh6G-G_mluju6czC85R9RcRA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent)
+
 ## Run it locally
 
 ### 1. Install MySQL 8 and Redis 7 (Ubuntu)
@@ -34,6 +36,7 @@ cp .env.example .env      # fill in DB_* and Cloudinary keys; later phases add m
 npm run db:migrate
 npm run seed              # wipes every table and loads the demo world (never in production)
 npm run dev               # http://localhost:4000
+npm run dev:worker        # in a second terminal: background jobs
 ```
 
 - API: `http://localhost:4000/api/v1` (health: `GET /api/v1/health`)
@@ -47,6 +50,8 @@ Point the frontend at it with `VITE_USE_MOCKS=false` and `VITE_API_URL=http://lo
 | Script                                               | What it does                                                                                         |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `npm run dev` / `npm start`                          | API with / without auto-reload                                                                       |
+| `npm run worker` / `npm run dev:worker`              | Background job worker (SMS, email, in-app notifications). Run it next to the API                     |
+| `npm run scheduler`                                  | Registers repeatable jobs, then exits (run on every deploy)                                          |
 | `npm test`                                           | Jest + Supertest. Creates and migrates the test database (`DB_NAME_TEST`, must end in `_test`) first |
 | `npm run test:coverage`                              | Tests with a coverage report                                                                         |
 | `npm run lint` / `npm run lint:fix`                  | ESLint                                                                                               |

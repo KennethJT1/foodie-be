@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-10-29 · Current phase: **5** · Next up: **Phase 5 — Redis, queues, notifications** (needs Redis 7 running locally or a `REDIS_URL`; and confirm CI is green on the first push)
+Last updated: 2026-10-29 · Current phase: **6** · Next up: **Phase 6 — Authentication, profile, addresses** (mount `/notifications` behind `authenticate`; add the `notifications.user_id` FK; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -27,7 +27,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 2 | Core plumbing aligned to the handoff | 1 | 1/1 | ✅ |
 | 3 | Database foundation and shared helpers | — | — | ✅ |
 | 4 | List query layer | — | — | ✅ |
-| 5 | Redis, queues, notifications | 4 | 0/4 | ⬜ |
+| 5 | Redis, queues, notifications | 4 | 0/4 (built; mounted in 6) | ✅ |
 | 6 | Authentication, profile, addresses | 17 | 0/17 | ⬜ |
 | 7 | Admin roles, permissions, admin users | 6 | 0/6 | ⬜ |
 | 8 | Uploads and audit log | 2 | 0/2 | ⬜ |
@@ -54,14 +54,18 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Area | File(s) | State |
 | --- | --- | --- |
 | Express app, middleware chain | `src/app.js` | Built: requestId, helmet, cors, compression, raw body for webhook, json, cookieParser, pino-http, rate limit |
-| Server + graceful shutdown | `src/server.js` | Built (HTTP only; no Socket.IO yet) |
-| Env validation | `src/config/env.js` | Built (Zod). `.env.example` lists every later var (Redis, JWT, cookie, Paystack, Termii, email, Google); each phase adds its vars to the Zod schema |
+| Server + graceful shutdown | `src/server.js` | Built (HTTP only; no Socket.IO yet); closes queues, Redis, DB |
+| Redis | `src/config/redis.js` | ioredis via `REDIS_URL` (lazy connect); every key under `REDIS_KEY_PREFIX` (default `kjt:<NODE_ENV>`); `closeRedis()` |
+| Queues | `src/core/queue/*`, `src/worker.js`, `src/scheduler.js` | `QUEUES` definitions (only `notifications` so far: concurrency 20, 5 attempts, exponential 10 s); `getQueue` / `addJob` / `jobId()`; `createWorker` routes by job name (unknown name → `UnrecoverableError`); worker process with graceful shutdown; scheduler registers `SCHEDULES` (empty) |
+| Notifications | `src/modules/notifications/*`, `src/db/models/notification.model.js`, migration `20261029100000-create-notifications.cjs` | Table + model; service: list (`type`, `unread=true`, scoped), unread count, mark read (404 if not yours), read all; `notify(userId, payload, { transaction, sms, email })`; `notifyLater()`; jobs `sms.send`, `email.send`, `inapp.create`. Routes built, **not mounted** (need `authenticate`) |
+| SMS / email | `src/integrations/termii/termii.client.js`, `src/integrations/email/email.client.js` | Termii in production, log mode elsewhere; email log mode only (production provider not chosen) |
+| Env validation | `src/config/env.js` | Built (Zod). `.env.example` lists every later var; Redis, Termii and email are validated now, the rest join the schema in their phases |
 | Logger | `src/config/logger.js` | Built (pino) |
 | Swagger | `src/config/openapi.js` | Serves `docs/api/openapi.yaml` at `/docs` (+ `/docs/openapi.json`); `docs/openapi/` removed |
 | Errors | `src/core/errors/*` | Aligned with handoff: every code has a status + friendly default message; classes take a specific code (`new ConflictError('TRIAL_USED')`, `new QuoteError('OUT_OF_RANGE')`) and reject codes of the wrong status |
 | Responses | `src/core/http/respond.js`, `asyncHandler.js` | `ok`, `created`, `noContent` (204), `paginated` |
-| Middlewares | `src/core/middlewares/*` | errorHandler (body-parser → 400/413, Sequelize → 409/422), notFound, rateLimit (in-memory; health exempt), requestId, validate (Zod → `fieldErrors`). CORS: 5173/5174/4173, `GET POST PATCH DELETE`, `Authorization, Content-Type` |
-| Health | `src/modules/health/health.routes.js`, `src/routes.js` | `GET /api/v1/health` (contract) + `/health`, `/health/ready` at the root |
+| Middlewares | `src/core/middlewares/*` | errorHandler (body-parser → 400/413, Sequelize → 409/422), notFound, rateLimit (Redis store; general 300/min, `authRateLimit` / `otpRateLimit` 5/min ready for phase 6; health exempt; requests pass if Redis is down), requestId, validate (Zod → `fieldErrors`). CORS: 5173/5174/4173, `GET POST PATCH DELETE`, `Authorization, Content-Type` |
+| Health | `src/modules/health/health.routes.js`, `src/routes.js` | `GET /api/v1/health` (contract) + `/health`, `/health/ready` (MySQL + Redis) at the root |
 | Database | `src/db/{sequelize,index,id,transaction,wipe}.js`, `src/db/models/index.js`, `src/db/migrationHelpers.cjs`, `src/config/database.cjs` | Sequelize (`underscored`, timestamps, UTC); loader for `src/db/models/*.model.js` + `associate()`; `idColumn()` / `newId()` (VARCHAR(64), UUID v7); `withTransaction` + `lockForUpdate`; migration column helpers (`id`, `foreignId`, `timestamps`, `softDelete`, `kobo`); `truncateAllTables()`. No real models or migrations yet |
 | List queries | `src/core/query/*` | `buildListQuery(req.query, config, { scope })` → `{ where, order, include, page, limit }`; `paginate(Model, listQuery)` (count, clamp page, fetch); `parseCursor` / `cursorMeta` / `cursorPaginate` (offset cursors like the mock) |
 | Utils | `src/core/utils/*` | `money`, `phone` (`normalisePhone`), `slug` (`slugify`, `uniqueSlug`), `dates` (Lagos days), `geo` (`haversineM`), `codes` (`orderCode`, `deliveryCode`, `uniqueCode`), `random` (seeded Faker `en_NG`, `weighted`) |
@@ -69,7 +73,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | API router | `src/routes.js` | Empty; modules mount here |
 | Seeder | `src/db/seed/index.js` | `npm run seed`: refuses production, wipes all tables, runs `SEED_STEPS` (empty) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
-| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (174 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
+| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (191 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
 
 ## Phase checklists
@@ -121,14 +125,14 @@ An endpoint counts as done only when it matches the contract, has integration te
 - [x] `paginate()` meta; cursor helpers
 - [x] Unit tests for every operator
 
-### Phase 5 — Redis, queues, notifications ⬜
+### Phase 5 — Redis, queues, notifications ✅
 
-- [ ] Redis connection; Redis rate-limit store; auth/OTP limits
-- [ ] BullMQ queue/worker factories, `worker.js`, `scheduler.js`
-- [ ] `notifications` queue: `sms.send`, `email.send`, `inapp.create`
-- [ ] `notifications` table + `notify()` helper
-- [ ] `/health/ready` checks Redis
-- Endpoints (mounted in phase 6):
+- [x] Redis connection; Redis rate-limit store; auth/OTP limits
+- [x] BullMQ queue/worker factories, `worker.js`, `scheduler.js`
+- [x] `notifications` queue: `sms.send`, `email.send`, `inapp.create`
+- [x] `notifications` table + `notify()` helper
+- [x] `/health/ready` checks Redis
+- Endpoints (service + routes built and tested at service level; mounted and HTTP-tested in phase 6, counted done then):
   - [ ] `GET /notifications`
   - [ ] `GET /notifications/unread-count`
   - [ ] `POST /notifications/{id}/read`
@@ -429,6 +433,12 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-10-29 | `$assoc.column$` search/sort only on belongsTo / hasOne includes; searching hasMany rows needs a custom `id IN (SELECT …)` filter | Sequelize moves the main query into a subquery when a hasMany is included with `limit`, so joined columns are out of reach. Every search in handoff section 3 is on a belongsTo relation |
 | 2026-10-29 | Scoped lists: a client filter on a scoped attribute is dropped, then the scope is ANDed in | Customers passing another `customerId` just get their own rows, never someone else's |
 | 2026-10-29 | Cursor = offset as a string (`"20"`), default limit 10, max 50 | Same as the mock's `cursorPaginate`; opaque to the client, so it can become a keyset cursor later |
+| 2026-10-29 | Redis is a managed instance (`rediss://`, set by the project owner) rather than local; keys are namespaced by `REDIS_KEY_PREFIX` (default `kjt:<NODE_ENV>`) so dev and tests share it safely | No local Redis on the dev machine |
+| 2026-10-29 | Job ids use `jobId('autoReject', orderId)` → `autoReject-<orderId>`; Architecture doc updated | BullMQ 6 rejects `:` in custom job ids |
+| 2026-10-29 | `notify()` writes the in-app row in the caller's transaction and queues SMS / email in `afterCommit`; a queue failure there is logged, not thrown | Nobody is texted about a change that rolled back, and a Redis blip can't fail a request whose DB work already committed |
+| 2026-10-29 | `notifications.user_id` has no FK yet; the phase 6 users migration adds it | `users` doesn't exist until phase 6 |
+| 2026-10-29 | Rate limiter uses `passOnStoreError` | A Redis outage degrades to "no rate limit" instead of taking the API down |
+| 2026-10-29 | **Open:** production email provider not chosen; `email.send` throws in production until one is wired in (`EMAIL_API_KEY` is reserved for it) | No provider named in the docs; project owner to decide before go-live |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
 ## Contract questions for the frontend
@@ -445,6 +455,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Phase | What was done |
 | --- | --- | --- |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
+| 2026-10-29 | 5 | Redis (managed, TLS), Redis rate-limit store + auth/OTP limiters, BullMQ queue/worker factories, `worker.js` and `scheduler.js` (smoke-tested as real processes), notifications table/model/service/jobs, `notify()`, readiness checks Redis. Tests: SMS/email in log mode, retry with backoff, unknown job fails without retry, duplicate job ids, notify after commit / nothing on rollback, 429 from the Redis limiter (191 tests green). Dev DB migrated. |
 | 2026-10-29 | 4 | List query layer: `buildListQuery`, `paginate`, cursor helpers; unit tests for every operator, clamp, max limit, ignored params, sort whitelist, scope override; MySQL integration test (174 tests green). |
 | 2026-10-29 | 3 | Database foundation: model loader, ID helper, transaction + row-lock helpers (concurrency test proves only one of two racing updates wins), migration helpers, shared utils with unit tests (125 tests green). |
 | 2026-10-29 | 1–2 | Finished phases 1 and 2: ESLint/Prettier, Jest + Supertest (66 tests green against `kjt_foodie_test`), CI workflow, README, full `.env.example`, seed placeholder + `truncateAllTables`; error codes/classes/messages aligned with the handoff, body-parser 400/413, `noContent`, CORS, `GET /api/v1/health`, Swagger on `docs/api/openapi.yaml` (`docs/openapi/` removed), Postman updated. |

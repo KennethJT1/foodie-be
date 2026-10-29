@@ -27,10 +27,10 @@ describe('GET /health (load balancers)', () => {
     expect(res.body.data.status).toBe('ok');
   });
 
-  it('/health/ready checks MySQL', async () => {
+  it('/health/ready checks MySQL and Redis', async () => {
     const res = await request(app).get('/health/ready');
     expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ status: 'ready', checks: { mysql: 'up' } });
+    expect(res.body.data).toEqual({ status: 'ready', checks: { mysql: 'up', redis: 'up' } });
   });
 });
 

@@ -1,0 +1,27 @@
+// Registers repeatable jobs (Backend Architecture, section 6), then exits. Run on every deploy with
+// `npm run scheduler`; the worker process runs the jobs. Re-running updates schedules in place.
+import { logger } from './config/logger.js';
+import { closeRedis } from './config/redis.js';
+import { closeQueues, getQueue } from './core/queue/index.js';
+
+// { id, queue, job, pattern } in Africa/Lagos time. Later phases add theirs
+// (auth.purgeTokens, subscriptions.scanRenewals, payments.reconcile...).
+export const SCHEDULES = [];
+
+const run = async () => {
+  for (const { id, queue, job, pattern, data = {} } of SCHEDULES) {
+    await getQueue(queue).upsertJobScheduler(id, { pattern, tz: 'Africa/Lagos' }, { name: job, data });
+    logger.info(`Scheduled ${queue}/${job} (${pattern})`);
+  }
+  logger.info(`${SCHEDULES.length} schedules registered`);
+};
+
+run()
+  .catch((err) => {
+    logger.fatal({ err }, 'Scheduler failed');
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await closeQueues();
+    await closeRedis();
+  });
