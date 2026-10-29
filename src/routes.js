@@ -3,6 +3,7 @@ import { authenticate } from './core/middlewares/index.js';
 import addressRoutes from './modules/addresses/addresses.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import bankRoutes from './modules/banks/banks.routes.js';
 import { liveness } from './modules/health/health.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import uploadRoutes from './modules/uploads/uploads.routes.js';
@@ -17,6 +18,7 @@ router.use('/me', userRoutes);
 router.use('/addresses', addressRoutes);
 router.use('/notifications', authenticate, notificationRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/banks', bankRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

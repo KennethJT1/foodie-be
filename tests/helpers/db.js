@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import mysql from 'mysql2/promise';
+import { invalidateSettings } from '../../src/modules/settings/settings.service.js';
 
 const require = createRequire(import.meta.url);
 const { test: config } = require('../../src/config/database.cjs');
@@ -25,8 +26,12 @@ const connect = async () => {
   return connection;
 };
 
-/** Empties every table. Call in beforeEach / beforeAll of integration tests that write data. */
+/**
+ * Empties every table (and drops caches built from them). Call in beforeEach / beforeAll of
+ * integration tests that write data.
+ */
 export const resetDatabase = async () => {
+  await invalidateSettings();
   const db = await connect();
   if (!tables) {
     const [rows] = await db.query(

@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-10-29 · Current phase: **9** · Next up: **Phase 9 — Settings, banks, reference data, seeder core** (`settings.updated` must call `audit.log`; confirm CI is green on the first push)
+Last updated: 2026-10-29 · Current phase: **10** · Next up: **Phase 10 — Vendor onboarding and admin vendor review** (use `requiredDocuments()`, `resolveAccount()` and `paystack.createSubaccount()`; attach documents through the `uploads` table; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -31,7 +31,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 6 | Authentication, profile, addresses | 17 | 17/17 | ✅ |
 | 7 | Admin roles, permissions, admin users | 6 | 6/6 | ✅ |
 | 8 | Uploads and audit log | 2 | 2/2 | ✅ |
-| 9 | Settings, banks, reference data, seeder core | 4 | 0/4 | ⬜ |
+| 9 | Settings, banks, reference data, seeder core | 4 | 4/4 | ✅ |
 | 10 | Vendor onboarding and admin vendor review | 12 | 0/12 | ⬜ |
 | 11 | Rider onboarding and admin rider review | 12 | 0/12 | ⬜ |
 | 12 | Plans, subscriptions, Paystack webhook | 14 | 0/14 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **30/162** | |
+| | **Total** | **162** | **34/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -77,9 +77,11 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Uploads | `src/modules/uploads/*`, `src/integrations/cloudinary/{cloudinary.client,storage}.js`, `uploads` table | `POST /uploads`: multer in memory (8 MB → 413), type from the bytes (sharp / `%PDF-`), images → WebP (EXIF-rotated, metadata stripped, width cap per purpose, ≤2 MB), role per purpose (403), documents `type: private` with 1 h signed URLs; every file recorded in `uploads` (owner, purpose, public id). `storage` is replaceable in tests; `uploadUrl(upload)` re-signs private files |
 | Audit log | `src/core/audit/audit.js`, `src/modules/audit/*`, `audit_logs` table | `audit.log({ actor, action, targetType, targetId, summary, req }, { transaction })` (actor null → System); `GET /admin/audit-log` (`audit_log.view`). Phase 7 actions write `admin_user.created/updated`, `role.updated/reset` |
 | API router | `src/routes.js` | Empty; modules mount here |
-| Seeder | `src/db/seed/index.js` | `npm run seed`: refuses production, wipes all tables, runs `SEED_STEPS` (empty) |
+| Seeder | `src/db/seed/index.js`, `steps/{reference,users}.js`, `data/{cities,reference}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents) then `users` |
+| Settings | `src/modules/settings/*`, tables `settings` (key → JSON), `service_areas`, `notification_templates`, `required_documents` | `getSettings()` (Redis 10 min, defaults in code for missing keys), `updateSettings()` (mock bounds + wording, max fee ≥ base fee, audited), `invalidateSettings()`, `requiredDocuments(appliesTo)`. `GET`/`PATCH /admin/settings` (`settings.manage`) |
+| Banks / Paystack | `src/modules/banks/*`, `src/integrations/paystack/paystack.client.js`, table `banks` | `paystack.listBanks / resolveAccount / createSubaccount` (replaceable in tests); `GET /banks` (public) and `POST /banks/resolve` (signed in, 10/min per user): Paystack in production with the list refreshed daily into `banks`, seeded list + fake lookup elsewhere |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
-| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (312 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
+| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
 
 ## Phase checklists
@@ -189,16 +191,16 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `POST /uploads`
   - [x] `GET /admin/audit-log`
 
-### Phase 9 — Settings, banks, reference data, seeder core ⬜
+### Phase 9 — Settings, banks, reference data, seeder core ✅
 
-- [ ] Tables: settings, service_areas, notification_templates, required_documents, banks
-- [ ] Settings cache + invalidation; Paystack client (banks, resolve, subaccount)
-- [ ] Seeder core (`npm run seed`): settings, areas, templates, banks, required docs, cities
+- [x] Tables: settings, service_areas, notification_templates, required_documents, banks
+- [x] Settings cache + invalidation; Paystack client (banks, resolve, subaccount)
+- [x] Seeder core (`npm run seed`): settings, areas, templates, banks, required docs, cities
 - Endpoints:
-  - [ ] `GET /admin/settings`
-  - [ ] `PATCH /admin/settings`
-  - [ ] `GET /banks`
-  - [ ] `POST /banks/resolve`
+  - [x] `GET /admin/settings`
+  - [x] `PATCH /admin/settings`
+  - [x] `GET /banks`
+  - [x] `POST /banks/resolve`
 
 ### Phase 10 — Vendor onboarding and admin vendor review ⬜
 
@@ -469,6 +471,13 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-10-29 | Who may upload: vendor → food_photo, vendor_logo, vendor_cover, vendor_document; rider → rider_document; customer → refund_photo; anyone signed in → avatar. Admins can only upload avatars | Contract: "purpose decides who may upload" without a table |
 | 2026-10-29 | `audit_logs` is append-only (no `updated_at`), keeps `actor_name` / `actor_role` as they were, no FK on `actor_id`; `audit.log` takes the caller's transaction | The log must not change when users do, and a rolled-back change must leave no entry |
 | 2026-10-29 | If Cloudinary stores a file but the `uploads` insert then fails, the file is orphaned | Rare; a cleanup job can sweep files with no row later (phase 22) |
+| 2026-10-29 | `settings` is key → JSON rows with the defaults in code (`settings.defaults.js`); a key without a row reads its default. `serviceAreas` and `notificationTemplates` live in their own tables but are read and written through the same settings object | New settings in later phases need no migration; areas carry centres / neighbourhoods and templates are looked up by key |
+| 2026-10-29 | Cities removed from `serviceAreas` are retired (`is_active = false`), not deleted; names match case-insensitively, so re-adding one revives it with its centre | Old addresses and vendors keep pointing at the city |
+| 2026-10-29 | Template edits only change existing keys (unknown key → 422 `notificationTemplates.N.key`); admins can change channel, subject and body | The code sends by key, so a new key would never be used |
+| 2026-10-29 | `PATCH /admin/settings` also accepts `processingFeePct` (as the mock does); numbers must be JSON numbers (the mock coerced strings) and kobo / seconds / days / hours must be whole numbers | Contract types are `integer` / `number` |
+| 2026-10-29 | Bank list and account lookup use Paystack only when `NODE_ENV=production`; `PAYSTACK_SECRET_KEY` is required there. Phase 12 decides separately how payments use the test keys in development | Plan: "Paystack list in production; seeded list locally"; the fake lookup gives the frontend journeys predictable names |
+| 2026-10-29 | If Paystack is down, `GET /banks` serves the last stored list instead of failing | The onboarding form keeps working |
+| 2026-10-29 | The seeder closes Redis as well as the DB when it ends; a killed seed leaves the DB empty, because the wipe commits before the seed transaction | Seed steps clear Redis caches; an open Redis connection kept the process alive after a successful seed |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
 ## Contract questions for the frontend
@@ -489,6 +498,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Phase | What was done |
 | --- | --- | --- |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
+| 2026-10-29 | 9 | Settings (key/JSON rows + defaults, Redis cache, mock validation, audited), service areas / templates / required documents / banks tables, Paystack client, `GET`/`PATCH /admin/settings`, `GET /banks`, `POST /banks/resolve`, `reference` seed step (seeder now also closes Redis); Postman Banks folder + settings requests; 337 tests green; dev DB migrated and reseeded. |
 | 2026-10-29 | 8 | `POST /uploads` (multer, sharp → WebP, type sniffing, role per purpose, private documents with signed URLs, `uploads` table) and `GET /admin/audit-log` (`audit_logs` table, `audit.log()` helper, phase 7 actions back-filled). Real Cloudinary checked once (public upload, private PDF via signed URL; test files deleted). Postman Uploads folder + Audit log request; dev DB migrated. |
 | 2026-10-29 | 7 | 296 tests green. Roles / permissions tables + migration defaults, `requirePermission` with Redis cache, permission matrix test over every admin endpoint × sub-role, `/admin/users` + `/admin/roles` (6 endpoints), Bull Board behind super admin, Postman "Admin · Users and roles" folder, utf8mb4_0900_ai_ci on every table; dev DB migrated. |
 | 2026-10-29 | 6 | Auth (register, password, OTP, Google, refresh rotation with reuse detection, logout, password reset), `/me` get / patch / delete, addresses, notifications mounted; users / vendors / riders / tokens / OTP / addresses tables; seed slice (81 users); Postman Auth, Account, Notifications folders; 249 tests green; dev DB migrated + seeded; verified end to end against the running server. |

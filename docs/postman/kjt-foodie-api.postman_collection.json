@@ -1515,7 +1515,7 @@
       ]
     },
     {
-      "name": "Admin · Users, roles and audit log",
+      "name": "Admin · Users, roles, audit log and settings",
       "description": "Admin accounts and the editable sub-role permission sets (handoff section 2). Uses `adminToken` (log in as super admin first).",
       "auth": {
         "type": "bearer",
@@ -1826,6 +1826,75 @@
               ]
             },
             "description": "Page of `{ id, actorName, actorRole, action, targetType, targetId, summary, ip, createdAt }`, newest first. Search: summary, actor name, action, target id. Filters: `actorRole`, `targetType`, `action` (prefix match, comma for several), `from` / `to` (Lagos days). Sort: `createdAt`.\n\n**Permission:** `audit_log.view` (super admin by default)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Fees and money in kobo, payout %, timeouts, trial / grace, refunds, `serviceAreas` (active city names) and `notificationTemplates`.\n\n**Permission:** `settings.manage`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderPayoutPct\": 75,\n  \"deliveryBaseFee\": 60000,\n  \"serviceAreas\": [\n    \"Lagos\",\n    \"Abuja\",\n    \"Port Harcourt\",\n    \"Ibadan\",\n    \"Enugu\",\n    \"Kano\"\n  ],\n  \"notificationTemplates\": [\n    {\n      \"key\": \"order_on_the_way\",\n      \"channel\": \"sms\",\n      \"subject\": \"\",\n      \"body\": \"Your KJT Foodie order is on the way. Delivery code: {{code}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Send only what changed. 422 `fieldErrors` with the form wording (`Enter a rider payout % between 0 and 100`, `The maximum fee must be at least the base fee`, `Keep at least one city`, `notificationTemplates.0.body`…). Cities left out of `serviceAreas` are retired, not deleted. Templates are edited by `key`. Audited as `settings.updated`.\n\n**Permission:** `settings.manage`."
           },
           "response": []
         }
@@ -2210,6 +2279,93 @@
               ]
             },
             "description": "Any role. WebP, at most 512 px wide."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Banks",
+      "description": "Settlement banks for vendor / rider onboarding. Production uses Paystack (list refreshed daily); elsewhere the seeded list of 12 and a fake lookup (the user name in capitals; account numbers ending `0000` are not found).",
+      "item": [
+        {
+          "name": "List banks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/banks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "banks"
+              ]
+            },
+            "description": "Public. `[{ code, name }]` by name."
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankCode\": \"058\",\n  \"accountNumber\": \"0123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/banks/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "banks",
+                "resolve"
+              ]
+            },
+            "description": "Signed in; 10 per minute per user. `{ bankCode, bankName, accountNumber, accountName }`. 422 `fieldErrors.bankCode` (unknown bank) or `fieldErrors.accountNumber` (not 10 digits, or not found — try `0123450000`)."
           },
           "response": []
         }

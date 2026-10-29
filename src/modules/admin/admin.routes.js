@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../../core/http/index.js';
 import { authenticate, requirePermission, requireRole, validate } from '../../core/middlewares/index.js';
 import * as controller from './admin.controller.js';
+import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
 
 // Mounted at /admin. Every route names its permission (x-permission in the contract).
@@ -28,5 +29,14 @@ router.patch(
 router.post('/roles/:id/reset', manage, validate({ params: idParams }), asyncHandler(controller.resetRole));
 
 router.get('/audit-log', requirePermission('audit_log.view'), asyncHandler(controller.listAuditLog));
+
+const settingsManage = requirePermission('settings.manage');
+router.get('/settings', settingsManage, asyncHandler(controller.getSettings));
+router.patch(
+  '/settings',
+  settingsManage,
+  validate({ body: updateSettingsBody }),
+  asyncHandler(controller.updateSettings),
+);
 
 export default router;

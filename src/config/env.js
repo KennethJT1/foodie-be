@@ -74,6 +74,12 @@ const envSchema = z.object({
   TERMII_BASE_URL: z.url().default('https://api.ng.termii.com'),
   EMAIL_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().min(1).default('KJT Foodie <no-reply@kjtfoodie.com>'),
+
+  // Bank list / account lookups use Paystack only in production (required there); elsewhere a
+  // seeded list and a fake lookup. Payments (phase 12) use the test keys in development.
+  PAYSTACK_SECRET_KEY: z.string().optional(),
+  PAYSTACK_PUBLIC_KEY: z.string().optional(),
+  PAYSTACK_BASE_URL: z.url().default('https://api.paystack.co'),
 });
 
 const parsed = envSchema
@@ -83,6 +89,8 @@ const parsed = envSchema
       if (value[key].length < 32)
         ctx.addIssue({ code: 'custom', path: [key], message: 'Use at least 32 random characters' });
     }
+    if (!value.PAYSTACK_SECRET_KEY)
+      ctx.addIssue({ code: 'custom', path: ['PAYSTACK_SECRET_KEY'], message: 'Required in production' });
   })
   .safeParse(process.env);
 
