@@ -5,6 +5,7 @@ import {
   invalidateRolePermissions,
   rolePermissions,
 } from '../../core/auth/index.js';
+import { audit } from '../../core/audit/index.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../core/errors/index.js';
 import { models, withTransaction } from '../../db/index.js';
 
@@ -25,11 +26,27 @@ const findRole = async (id) => {
   return role;
 };
 
-const replacePermissions = async (role, permissions) => {
+const replacePermissions = async (role, permissions, { actor, req, reset = false }) => {
+  const before = await rolePermissions(role.id);
+  const added = permissions.filter((p) => !before.includes(p));
+  const removed = before.filter((p) => !permissions.includes(p));
   await withTransaction(async (transaction) => {
     await AdminRolePermission.destroy({ where: { roleId: role.id }, transaction });
     await AdminRolePermission.bulkCreate(
       permissions.map((permissionId) => ({ roleId: role.id, permissionId })),
+      { transaction },
+    );
+    await audit.log(
+      {
+        actor,
+        action: reset ? 'role.reset' : 'role.updated',
+        targetType: 'role',
+        targetId: role.id,
+        summary: reset
+          ? `${role.id} back to defaults`
+          : `${role.id}: +${added.join(', ') || 'none'} −${removed.join(', ') || 'none'}`,
+        req,
+      },
       { transaction },
     );
   });
@@ -38,7 +55,7 @@ const replacePermissions = async (role, permissions) => {
 };
 
 /** PATCH /admin/roles/{id}: super_admin is locked; every role keeps dashboard.view. */
-export const updateRole = async (id, { permissions }) => {
+export const updateRole = async (actor, id, { permissions }, req) => {
   const role = await findRole(id);
   if (role.isLocked) throw new ConflictError('CONFLICT', 'The super admin role always has every permission.');
   if (permissions.some((p) => !PERMISSIONS.includes(p))) {
@@ -46,11 +63,11 @@ export const updateRole = async (id, { permissions }) => {
   }
   if (!permissions.includes('dashboard.view'))
     throw new ValidationError({ permissions: 'Every role needs the overview' });
-  return replacePermissions(role, [...new Set(permissions)]);
+  return replacePermissions(role, [...new Set(permissions)], { actor, req });
 };
 
 /** POST /admin/roles/{id}/reset: back to the handoff defaults. */
-export const resetRole = async (id) => {
+export const resetRole = async (actor, id, req) => {
   const role = await findRole(id);
-  return replacePermissions(role, [...DEFAULT_ROLE_PERMISSIONS[role.id]]);
+  return replacePermissions(role, [...DEFAULT_ROLE_PERMISSIONS[role.id]], { actor, req, reset: true });
 };

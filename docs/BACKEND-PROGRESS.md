@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-10-29 · Current phase: **8** · Next up: **Phase 8 — Uploads and audit log** (back-fill audit entries for the phase 7 admin-user and role actions; confirm CI is green on the first push)
+Last updated: 2026-10-29 · Current phase: **9** · Next up: **Phase 9 — Settings, banks, reference data, seeder core** (`settings.updated` must call `audit.log`; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -30,7 +30,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 5 | Redis, queues, notifications | 4 | 4/4 | ✅ |
 | 6 | Authentication, profile, addresses | 17 | 17/17 | ✅ |
 | 7 | Admin roles, permissions, admin users | 6 | 6/6 | ✅ |
-| 8 | Uploads and audit log | 2 | 0/2 | ⬜ |
+| 8 | Uploads and audit log | 2 | 2/2 | ✅ |
 | 9 | Settings, banks, reference data, seeder core | 4 | 0/4 | ⬜ |
 | 10 | Vendor onboarding and admin vendor review | 12 | 0/12 | ⬜ |
 | 11 | Rider onboarding and admin rider review | 12 | 0/12 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **28/162** | |
+| | **Total** | **162** | **30/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -74,11 +74,12 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Database | `src/db/{sequelize,index,id,transaction,wipe}.js`, `src/db/models/index.js`, `src/db/migrationHelpers.cjs`, `src/config/database.cjs` | Sequelize (`underscored`, timestamps, UTC); loader for `src/db/models/*.model.js` + `associate()`; `idColumn()` / `newId()` (VARCHAR(64), UUID v7); `withTransaction` + `lockForUpdate`; migration column helpers (`id`, `foreignId`, `timestamps`, `softDelete`, `kobo`); `truncateAllTables()`. No real models or migrations yet |
 | List queries | `src/core/query/*` | `buildListQuery(req.query, config, { scope })` → `{ where, order, include, page, limit }`; `paginate(Model, listQuery)` (count, clamp page, fetch); `parseCursor` / `cursorMeta` / `cursorPaginate` (offset cursors like the mock) |
 | Utils | `src/core/utils/*` | `money`, `phone` (`normalisePhone`), `slug` (`slugify`, `uniqueSlug`), `dates` (Lagos days), `geo` (`haversineM`), `codes` (`orderCode`, `deliveryCode`, `uniqueCode`), `random` (seeded Faker `en_NG`, `weighted`) |
-| Cloudinary | `src/integrations/cloudinary/cloudinary.client.js` | Client configured, no upload endpoint |
+| Uploads | `src/modules/uploads/*`, `src/integrations/cloudinary/{cloudinary.client,storage}.js`, `uploads` table | `POST /uploads`: multer in memory (8 MB → 413), type from the bytes (sharp / `%PDF-`), images → WebP (EXIF-rotated, metadata stripped, width cap per purpose, ≤2 MB), role per purpose (403), documents `type: private` with 1 h signed URLs; every file recorded in `uploads` (owner, purpose, public id). `storage` is replaceable in tests; `uploadUrl(upload)` re-signs private files |
+| Audit log | `src/core/audit/audit.js`, `src/modules/audit/*`, `audit_logs` table | `audit.log({ actor, action, targetType, targetId, summary, req }, { transaction })` (actor null → System); `GET /admin/audit-log` (`audit_log.view`). Phase 7 actions write `admin_user.created/updated`, `role.updated/reset` |
 | API router | `src/routes.js` | Empty; modules mount here |
 | Seeder | `src/db/seed/index.js` | `npm run seed`: refuses production, wipes all tables, runs `SEED_STEPS` (empty) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
-| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (296 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
+| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (312 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
 
 ## Phase checklists
@@ -180,13 +181,13 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `PATCH /admin/roles/{id}`
   - [x] `POST /admin/roles/{id}/reset`
 
-### Phase 8 — Uploads and audit log ⬜
+### Phase 8 — Uploads and audit log ✅
 
-- [ ] Multipart upload → Cloudinary (types, 8 MB, WebP for food, private documents)
-- [ ] `audit.log()` helper; back-fill phase 7 actions
+- [x] Multipart upload → Cloudinary (types, 8 MB, WebP for food, private documents)
+- [x] `audit.log()` helper; back-fill phase 7 actions
 - Endpoints:
-  - [ ] `POST /uploads`
-  - [ ] `GET /admin/audit-log`
+  - [x] `POST /uploads`
+  - [x] `GET /admin/audit-log`
 
 ### Phase 9 — Settings, banks, reference data, seeder core ⬜
 
@@ -461,7 +462,13 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-10-29 | Duplicate email on `POST /admin/users` → **422** `fieldErrors.email` (as the mock), unlike register's 409 | Contract lists only 422 for this endpoint |
 | 2026-10-29 | Every migration passes `TABLE_OPTIONS` (`utf8mb4_0900_ai_ci`); test DB recreated with that collation if it differs. Phase 6 migrations edited in place (not yet deployed anywhere but dev, which already had that collation) | Case- and accent-insensitive search must not depend on the server default |
 | 2026-10-29 | Bull Board at `/admin/queues` (server root, not `/api/v1`): open `/admin/queues?token=<access token>` once; the token moves to an httpOnly `SameSite=Strict` cookie on `Path=/admin/queues` and the URL is cleaned by redirect. Super admin only, re-checked every request | A browser page can't send a Bearer header; the cookie never reaches the API |
-| 2026-10-29 | Audit entries for admin-user and role changes are not written yet | The audit log is phase 8; it back-fills these |
+| 2026-10-29 | Every `POST /uploads` file gets an `uploads` row (owner, purpose, Cloudinary public id, returned url). Later phases resolve a `url` the client sends (`photos`, `documents[].url`, …) through this table and refuse files that aren't the caller's or have the wrong purpose | Stops users attaching other people's files; private documents can be re-signed from the public id |
+| 2026-10-29 | Private documents use Cloudinary `type: private` + `private_download_url` (1 h). Screens that show documents later (onboarding, admin review) re-sign with `uploadUrl()`; the stored url is only an identifier | Handoff: "signed, short-lived URLs; owner and admins only". Checked against the real account: the signed URL downloads the PDF |
+| 2026-10-29 | Upload type is detected from the bytes (sharp metadata / `%PDF-`), never from the file name or MIME type; GIF, HEIC, SVG etc. → 422. Documents may be an image (stored as WebP) or a PDF (stored as-is) | A renamed file can't slip through; SVG could carry script |
+| 2026-10-29 | Width caps: food photo / cover / refund photo 1600 px, logo / avatar 512 px, documents 2000 px; WebP quality steps 80 → 45 until ≤ 2 MB | Handoff only fixes food photos (1600 px, < 2 MB); the rest are our choice |
+| 2026-10-29 | Who may upload: vendor → food_photo, vendor_logo, vendor_cover, vendor_document; rider → rider_document; customer → refund_photo; anyone signed in → avatar. Admins can only upload avatars | Contract: "purpose decides who may upload" without a table |
+| 2026-10-29 | `audit_logs` is append-only (no `updated_at`), keeps `actor_name` / `actor_role` as they were, no FK on `actor_id`; `audit.log` takes the caller's transaction | The log must not change when users do, and a rolled-back change must leave no entry |
+| 2026-10-29 | If Cloudinary stores a file but the `uploads` insert then fails, the file is orphaned | Rare; a cleanup job can sweep files with no row later (phase 22) |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
 ## Contract questions for the frontend
@@ -474,6 +481,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | 2026-10-29 | `POST /auth/register` duplicate | The mock returns 422 `VALIDATION_ERROR` with `fieldErrors.phone`; the contract says 409. Backend follows the contract (409 `CONFLICT` + `fieldErrors`). Please align the mock |
 | 2026-10-29 | `POST /auth/logout` | Contract inherits `bearerAuth`; backend accepts it without a token (cookie only). Suggest `security: []` in the contract |
 | 2026-10-29 | `GET /me` | Backend also returns `phoneVerified` and `createdAt` (not in the `User` schema); please add them or say if unwanted |
+| 2026-10-29 | `POST /uploads` | `width` / `height` are `integer` in the contract; for a PDF document the backend returns `null`. Please mark them nullable |
 | 2026-10-29 | `POST /auth/login` 401 | The mock sends `INVALID_CREDENTIALS`, which the handoff error table does not list. Backend sends it; please add it to the handoff table |
 
 ## Session log
@@ -481,6 +489,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Phase | What was done |
 | --- | --- | --- |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
+| 2026-10-29 | 8 | `POST /uploads` (multer, sharp → WebP, type sniffing, role per purpose, private documents with signed URLs, `uploads` table) and `GET /admin/audit-log` (`audit_logs` table, `audit.log()` helper, phase 7 actions back-filled). Real Cloudinary checked once (public upload, private PDF via signed URL; test files deleted). Postman Uploads folder + Audit log request; dev DB migrated. |
 | 2026-10-29 | 7 | 296 tests green. Roles / permissions tables + migration defaults, `requirePermission` with Redis cache, permission matrix test over every admin endpoint × sub-role, `/admin/users` + `/admin/roles` (6 endpoints), Bull Board behind super admin, Postman "Admin · Users and roles" folder, utf8mb4_0900_ai_ci on every table; dev DB migrated. |
 | 2026-10-29 | 6 | Auth (register, password, OTP, Google, refresh rotation with reuse detection, logout, password reset), `/me` get / patch / delete, addresses, notifications mounted; users / vendors / riders / tokens / OTP / addresses tables; seed slice (81 users); Postman Auth, Account, Notifications folders; 249 tests green; dev DB migrated + seeded; verified end to end against the running server. |
 | 2026-10-29 | 5 | Redis (managed, TLS), Redis rate-limit store + auth/OTP limiters, BullMQ queue/worker factories, `worker.js` and `scheduler.js` (smoke-tested as real processes), notifications table/model/service/jobs, `notify()`, readiness checks Redis. Tests: SMS/email in log mode, retry with backoff, unknown job fails without retry, duplicate job ids, notify after commit / nothing on rollback, 429 from the Redis limiter (191 tests green). Dev DB migrated. |

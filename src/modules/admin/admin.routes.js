@@ -27,4 +27,6 @@ router.patch(
 );
 router.post('/roles/:id/reset', manage, validate({ params: idParams }), asyncHandler(controller.resetRole));
 
+router.get('/audit-log', requirePermission('audit_log.view'), asyncHandler(controller.listAuditLog));
+
 export default router;

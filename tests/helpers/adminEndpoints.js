@@ -8,4 +8,5 @@ export const ADMIN_ENDPOINTS = [
   ['GET', '/api/v1/admin/roles', 'admin_users.manage'],
   ['PATCH', '/api/v1/admin/roles/support', 'admin_users.manage'],
   ['POST', '/api/v1/admin/roles/missing_role/reset', 'admin_users.manage'],
+  ['GET', '/api/v1/admin/audit-log', 'audit_log.view'],
 ];
