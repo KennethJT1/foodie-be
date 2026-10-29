@@ -50,6 +50,10 @@
     {
       "key": "notificationId",
       "value": ""
+    },
+    {
+      "key": "adminUserId",
+      "value": ""
     }
   ],
   "item": [
@@ -1507,6 +1511,263 @@
               "body": "{\n  \"success\": true,\n  \"data\": {\n    \"done\": true\n  }\n}"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Admin · Users and roles",
+      "description": "Admin accounts and the editable sub-role permission sets (handoff section 2). Uses `adminToken` (log in as super admin first).",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "List admins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?search=&adminRole=support,finance&sort=name",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "adminRole",
+                  "value": "support,finance"
+                },
+                {
+                  "key": "sort",
+                  "value": "name"
+                }
+              ]
+            },
+            "description": "Page of `{ id, name, email, adminRole, status, createdAt }`. Search: name, email. Filters: `adminRole`, `status`. Default sort `name`.\n\n**Permission:** `admin_users.manage` (super admin by default). 403 for other admins and non-admins."
+          },
+          "response": []
+        },
+        {
+          "name": "Add an admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('adminUserId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Chiamaka\",\n  \"lastName\": \"Obi\",\n  \"email\": \"chiamaka.obi@kjtfoodie.test\",\n  \"adminRole\": \"support\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Creates the admin without a password and emails a code (valid 3 days) with a link to the set-password page; they finish with POST /auth/password/reset. 422 field errors, including `email: That email already has an account`.\n\n**Permission:** `admin_users.manage` (super admin by default). 403 for other admins and non-admins."
+          },
+          "response": []
+        },
+        {
+          "name": "Change an admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminRole\": \"finance\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{adminUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{adminUserId}}"
+              ]
+            },
+            "description": "Change another admin's `adminRole` and / or `status` (`active` | `suspended`; suspended admins are blocked at once). 409 for yourself, 404 for non-admins.\n\n**Permission:** `admin_users.manage` (super admin by default). 403 for other admins and non-admins."
+          },
+          "response": []
+        },
+        {
+          "name": "List roles and permissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "roles"
+              ]
+            },
+            "description": "`{ roles: [{ id, name, permissions }], permissions: [every permission] }`.\n\n**Permission:** `admin_users.manage` (super admin by default). 403 for other admins and non-admins."
+          },
+          "response": []
+        },
+        {
+          "name": "Set a role's permissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    \"dashboard.view\",\n    \"customers.view\",\n    \"orders.view\",\n    \"refunds.view\",\n    \"support.manage\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/roles/support",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "roles",
+                "support"
+              ]
+            },
+            "description": "Replaces the role's permission set; takes effect on the next request of every admin with that role. 409 for `super_admin` (always everything); 422 without `dashboard.view` or with unknown permissions.\n\n**Permission:** `admin_users.manage` (super admin by default). 403 for other admins and non-admins."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset a role to defaults",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/roles/support/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "roles",
+                "support",
+                "reset"
+              ]
+            },
+            "description": "Back to the default set from the handoff.\n\n**Permission:** `admin_users.manage` (super admin by default). 403 for other admins and non-admins."
+          },
+          "response": []
         }
       ]
     }

@@ -58,11 +58,13 @@ const parseSort = (sort, sortable) =>
     .filter(Boolean)
     .map((key) => (key.startsWith('-') ? [key.slice(1), 'DESC'] : [key, 'ASC']))
     .filter(([key]) => Object.hasOwn(sortable, key))
-    .map(([key, direction]) => {
+    .flatMap(([key, direction]) => {
       const target = sortable[key];
-      // A column name, a nested path array (['vendor', 'name']) or a function returning an order item
-      if (typeof target === 'function') return target(direction);
-      return Array.isArray(target) ? [...target, direction] : [target, direction];
+      // A function returning an order item, several columns ([['firstName'], ['lastName']]),
+      // a nested path (['vendor', 'name']) or a column name
+      if (typeof target === 'function') return [target(direction)];
+      if (Array.isArray(target) && Array.isArray(target[0])) return target.map((path) => [...path, direction]);
+      return [Array.isArray(target) ? [...target, direction] : [target, direction]];
     });
 
 /** `YYYY-MM-DD` (a whole Lagos day) or a full ISO timestamp → Date; anything else → undefined. */
@@ -88,7 +90,8 @@ const parseDate = (value, edge) => {
  *   or `(values, query) => where | undefined` for custom filters (geo)
  * @param {string} [config.dateField]  attribute `from` / `to` apply to (default createdAt)
  * @param {string} [config.defaultSort]  used when `sort` has no whitelisted key
- * @param {Record<string, string | string[] | Function>} [config.sortable]  API sort key → attribute
+ * @param {Record<string, string | string[] | string[][] | Function>} [config.sortable]  API sort key →
+ *   attribute, nested path, several columns, or a function
  * @param {object[]} [config.include]  Sequelize includes (needed for `$assoc.column$` search/sort)
  * @param {object} [options]
  * @param {object} [options.scope]  where conditions that always apply (who may see what); any client

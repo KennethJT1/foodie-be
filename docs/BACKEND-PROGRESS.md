@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-10-29 · Current phase: **7** · Next up: **Phase 7 — Admin roles, permissions, admin users** (move `DEFAULT_ROLE_PERMISSIONS` into the roles table; confirm CI is green on the first push)
+Last updated: 2026-10-29 · Current phase: **8** · Next up: **Phase 8 — Uploads and audit log** (back-fill audit entries for the phase 7 admin-user and role actions; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -29,7 +29,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 4 | List query layer | — | — | ✅ |
 | 5 | Redis, queues, notifications | 4 | 4/4 | ✅ |
 | 6 | Authentication, profile, addresses | 17 | 17/17 | ✅ |
-| 7 | Admin roles, permissions, admin users | 6 | 0/6 | ⬜ |
+| 7 | Admin roles, permissions, admin users | 6 | 6/6 | ✅ |
 | 8 | Uploads and audit log | 2 | 0/2 | ⬜ |
 | 9 | Settings, banks, reference data, seeder core | 4 | 0/4 | ⬜ |
 | 10 | Vendor onboarding and admin vendor review | 12 | 0/12 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **22/162** | |
+| | **Total** | **162** | **28/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -58,9 +58,10 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Redis | `src/config/redis.js` | ioredis via `REDIS_URL` (lazy connect); every key under `REDIS_KEY_PREFIX` (default `kjt:<NODE_ENV>`); `closeRedis()` |
 | Queues | `src/core/queue/*`, `src/worker.js`, `src/scheduler.js` | `QUEUES` definitions (only `notifications` so far: concurrency 20, 5 attempts, exponential 10 s); `getQueue` / `addJob` / `jobId()`; `createWorker` routes by job name (unknown name → `UnrecoverableError`); worker process with graceful shutdown; scheduler registers `SCHEDULES` (empty) |
 | Notifications | `src/modules/notifications/*`, `src/db/models/notification.model.js`, migration `20261029100000-create-notifications.cjs` | Table + model; service: list (`type`, `unread=true`, scoped), unread count, mark read (404 if not yours), read all; `notify(userId, payload, { transaction, sms, email })`; `notifyLater()`; jobs `sms.send`, `email.send`, `inapp.create`. Mounted at `/notifications` behind `authenticate` |
-| Auth | `src/core/auth/*`, `src/core/middlewares/auth.js`, `src/modules/auth/*` | JWT access token (HS256, 15 min, `sub` + `role`); `authenticate` reloads the user every request (banned / suspended → 403 at once), `requireRole(...)`; refresh token = random 48 bytes in `kjt_refresh` cookie (httpOnly, `Path=/api/v1/auth`, SameSite=Lax, 30 days), stored as keyed SHA-256, rotated every refresh, family revoked on reuse (15 s grace for parallel tabs); OTPs hashed, 5 tries, single use, `123456` outside production; bcrypt (12; 4 in tests); Google ID token verify (`google.verifyIdToken`, replaceable in tests); per-route 5/min limits + OTP 5 per 10 min per phone; `DEFAULT_ROLE_PERMISSIONS` (until phase 7) |
+| Auth | `src/core/auth/*`, `src/core/middlewares/auth.js`, `src/modules/auth/*` | JWT access token (HS256, 15 min, `sub` + `role`); `authenticate` reloads the user every request (banned / suspended → 403 at once), `requireRole(...)`; refresh token = random 48 bytes in `kjt_refresh` cookie (httpOnly, `Path=/api/v1/auth`, SameSite=Lax, 30 days), stored as keyed SHA-256, rotated every refresh, family revoked on reuse (15 s grace for parallel tabs); OTPs hashed, 5 tries, single use, `123456` outside production; bcrypt (12; 4 in tests); Google ID token verify (`google.verifyIdToken`, replaceable in tests); per-route 5/min limits + OTP 5 per 10 min per phone; live permission sets from `admin_role_permissions` via `rolePermissions()` (Redis cache 10 min, invalidated on change); `requirePermission(...)` |
 | Users / account | `src/modules/users/*`, `src/modules/addresses/*` | `toUserDto` (contract `User` with `permissions`, `vendor {…}`, `rider {…}`); `/me` get / patch / delete (anonymise + soft delete + revoke sessions); addresses CRUD + default, default first |
-| Tables | migrations `20261029110000`–`110500` | `users` (paranoid), minimal `vendors` and `riders` (phases 10–12 add columns), `refresh_tokens`, `otp_codes`, `addresses`; FK `notifications.user_id → users` |
+| Tables | migrations `20261029110000`–`120000` | `users` (paranoid), minimal `vendors` and `riders` (phases 10–12 add columns), `refresh_tokens`, `otp_codes`, `addresses`; FK `notifications.user_id → users`; `permissions`, `admin_roles`, `admin_role_permissions` (defaults inserted by the migration), FK `users.admin_role → admin_roles`. Every table `utf8mb4_0900_ai_ci` |
+| Admin users / roles | `src/modules/admin/*` | `/admin/users` list / create (invite email with a 72 h set-password code) / patch (role, suspend, not yourself); `/admin/roles` list / patch / reset; Bull Board at `/admin/queues` (super admin; `?token=` link → path-scoped cookie) |
 | Seed | `src/db/seed/steps/users.js`, `src/db/seed/data/cities.js` | 11 demo accounts (handoff 8.2, password `password123`), `ven_mama_put` / `ven_expired` / `ven_new`, `rid_tunde` / `rid_new`, Ada's 2 addresses, 70 customers `usr_customer_001…070` (3 suspended, 2 banned) with one address each. Dev DB migrated and seeded |
 | SMS / email | `src/integrations/termii/termii.client.js`, `src/integrations/email/email.client.js` | Termii in production, log mode elsewhere; email log mode only (production provider not chosen) |
 | Env validation | `src/config/env.js` | Built (Zod). `.env.example` lists every later var; Redis, Termii and email are validated now, the rest join the schema in their phases |
@@ -77,7 +78,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | API router | `src/routes.js` | Empty; modules mount here |
 | Seeder | `src/db/seed/index.js` | `npm run seed`: refuses production, wipes all tables, runs `SEED_STEPS` (empty) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
-| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (249 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
+| Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (296 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
 
 ## Phase checklists
@@ -166,18 +167,18 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `DELETE /addresses/{id}`
   - [x] `POST /addresses/{id}/default`
 
-### Phase 7 — Admin roles, permissions, admin users ⬜
+### Phase 7 — Admin roles, permissions, admin users ✅
 
-- [ ] Tables: roles, permissions, role_permissions; default sets from handoff
-- [ ] `requirePermission` with Redis cache; permission test matrix
-- [ ] Bull Board behind super admin
+- [x] Tables: roles, permissions, role_permissions; default sets from handoff
+- [x] `requirePermission` with Redis cache; permission test matrix
+- [x] Bull Board behind super admin
 - Endpoints:
-  - [ ] `GET /admin/users`
-  - [ ] `POST /admin/users`
-  - [ ] `PATCH /admin/users/{id}`
-  - [ ] `GET /admin/roles`
-  - [ ] `PATCH /admin/roles/{id}`
-  - [ ] `POST /admin/roles/{id}/reset`
+  - [x] `GET /admin/users`
+  - [x] `POST /admin/users`
+  - [x] `PATCH /admin/users/{id}`
+  - [x] `GET /admin/roles`
+  - [x] `PATCH /admin/roles/{id}`
+  - [x] `POST /admin/roles/{id}/reset`
 
 ### Phase 8 — Uploads and audit log ⬜
 
@@ -454,6 +455,13 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-10-29 | `JWT_REFRESH_TTL` is read as days (`30d`) to match the existing `.env` | Owner's `.env` already used that key |
 | 2026-10-29 | `RATE_LIMITS=false` in tests (tests/setup/env.js); auth limits are per route (`authRateLimit('login')`) | One shared counter across all auth routes would lock users out after a normal sign-in flow |
 | 2026-10-29 | Test reset uses one multi-statement query on a test-only connection; `DB_TEST_HOST/PORT/USER/PASS/SSL` can point tests at a local MySQL; Jest timeout 60 s | Remote TiDB round trips (~0.45 s) made per-test resets take ~5 s; the full suite takes ~7 min remotely |
+| 2026-10-29 | Admin roles live in `admin_roles` / `admin_role_permissions` (slug ids = `users.admin_role`, now an FK); `super_admin` is locked and always has every permission in code, whatever the table says | Handoff section 2; nobody can lock everyone out |
+| 2026-10-29 | `ensureAdminRoles()` re-inserts missing roles + defaults; the seeder and the admin test factory call it | Seed wipes and test resets empty the roles tables the migration filled |
+| 2026-10-29 | `POST /admin/users` creates the admin with no password and emails a 72 h `reset` OTP + `FRONTEND_URL/reset-password?identifier=…`; they finish through `POST /auth/password/reset` | Contract says "they get an email to set a password"; reuses the existing reset flow instead of a new invite endpoint |
+| 2026-10-29 | Duplicate email on `POST /admin/users` → **422** `fieldErrors.email` (as the mock), unlike register's 409 | Contract lists only 422 for this endpoint |
+| 2026-10-29 | Every migration passes `TABLE_OPTIONS` (`utf8mb4_0900_ai_ci`); test DB recreated with that collation if it differs. Phase 6 migrations edited in place (not yet deployed anywhere but dev, which already had that collation) | Case- and accent-insensitive search must not depend on the server default |
+| 2026-10-29 | Bull Board at `/admin/queues` (server root, not `/api/v1`): open `/admin/queues?token=<access token>` once; the token moves to an httpOnly `SameSite=Strict` cookie on `Path=/admin/queues` and the URL is cleaned by redirect. Super admin only, re-checked every request | A browser page can't send a Bearer header; the cookie never reaches the API |
+| 2026-10-29 | Audit entries for admin-user and role changes are not written yet | The audit log is phase 8; it back-fills these |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
 ## Contract questions for the frontend
@@ -473,6 +481,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | Date | Phase | What was done |
 | --- | --- | --- |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
+| 2026-10-29 | 7 | 296 tests green. Roles / permissions tables + migration defaults, `requirePermission` with Redis cache, permission matrix test over every admin endpoint × sub-role, `/admin/users` + `/admin/roles` (6 endpoints), Bull Board behind super admin, Postman "Admin · Users and roles" folder, utf8mb4_0900_ai_ci on every table; dev DB migrated. |
 | 2026-10-29 | 6 | Auth (register, password, OTP, Google, refresh rotation with reuse detection, logout, password reset), `/me` get / patch / delete, addresses, notifications mounted; users / vendors / riders / tokens / OTP / addresses tables; seed slice (81 users); Postman Auth, Account, Notifications folders; 249 tests green; dev DB migrated + seeded; verified end to end against the running server. |
 | 2026-10-29 | 5 | Redis (managed, TLS), Redis rate-limit store + auth/OTP limiters, BullMQ queue/worker factories, `worker.js` and `scheduler.js` (smoke-tested as real processes), notifications table/model/service/jobs, `notify()`, readiness checks Redis. Tests: SMS/email in log mode, retry with backoff, unknown job fails without retry, duplicate job ids, notify after commit / nothing on rollback, 429 from the Redis limiter (191 tests green). Dev DB migrated. |
 | 2026-10-29 | 4 | List query layer: `buildListQuery`, `paginate`, cursor helpers; unit tests for every operator, clamp, max limit, ignored params, sort whitelist, scope override; MySQL integration test (174 tests green). |

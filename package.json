@@ -32,6 +32,8 @@
   },
   "homepage": "https://github.com/KennethJT1/foodie-be#readme",
   "dependencies": {
+    "@bull-board/api": "^9.10.5",
+    "@bull-board/express": "^9.10.5",
     "@faker-js/faker": "^10.6.0",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.5.1",

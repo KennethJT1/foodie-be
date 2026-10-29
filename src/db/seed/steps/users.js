@@ -1,5 +1,5 @@
 // Demo accounts (handoff 8.2), Ada's two addresses and ~70 customers (handoff 8.4)
-import { hashPassword } from '../../../core/auth/index.js';
+import { ensureAdminRoles, hashPassword } from '../../../core/auth/index.js';
 import { weighted } from '../../../core/utils/random.js';
 import { models } from '../../index.js';
 import { CITIES } from '../data/cities.js';
@@ -96,6 +96,8 @@ const makeAddress = (faker, city, label = 'Home') => ({
 });
 
 export const users = async ({ transaction, faker, now }) => {
+  // Admins reference the roles table, which the wipe emptied
+  await ensureAdminRoles({ transaction });
   // One hash for every demo account: they all share the demo password
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   const verifiedAt = new Date(now - 200 * DAY);

@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '../../src/core/auth/index.js';
+import { ensureAdminRoles, hashPassword, signAccessToken } from '../../src/core/auth/index.js';
 import { models } from '../../src/db/index.js';
 
 const { User, Vendor, Rider } = models;
@@ -10,6 +10,7 @@ let n = 0;
 /** Creates a user (+ vendor / rider profile for those roles). Defaults are a unique customer. */
 export const createUser = async ({ vendor, rider, ...overrides } = {}) => {
   hash ??= await hashPassword(PASSWORD);
+  if (overrides.role === 'admin') await ensureAdminRoles();
   n += 1;
   const user = await User.create({
     role: 'customer',

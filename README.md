@@ -43,6 +43,7 @@ npm run dev:worker        # in a second terminal: background jobs
 - API: `http://localhost:4000/api/v1` (health: `GET /api/v1/health`)
 - Swagger UI: `http://localhost:4000/docs` (serves `docs/api/openapi.yaml`)
 - Load balancer checks: `GET /health`, `GET /health/ready`
+- Bull Board (super admin): `http://localhost:4000/admin/queues?token=<access token>` (the token moves into a cookie)
 
 Point the frontend at it with `VITE_USE_MOCKS=false` and `VITE_API_URL=http://localhost:4000/api/v1`.
 

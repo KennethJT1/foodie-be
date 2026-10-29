@@ -234,3 +234,12 @@ it('passes include through', () => {
   const include = [{ association: 'vendor' }];
   expect(buildListQuery({}, { include }).include).toBe(include);
 });
+
+it('a sort key can cover several columns', () => {
+  const { order } = buildListQuery({ sort: '-name' }, { sortable: { name: [['firstName'], ['lastName']] } });
+  expect(order).toEqual([
+    ['firstName', 'DESC'],
+    ['lastName', 'DESC'],
+    ['id', 'ASC'],
+  ]);
+});

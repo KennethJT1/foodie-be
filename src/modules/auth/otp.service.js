@@ -18,10 +18,10 @@ const generateCode = () =>
  * Creates a code for `identifier` (E.164 phone or email). Earlier unused codes for the same
  * purpose stop working. Returns { otp, code, expiresInSec }; the caller sends `code`.
  */
-export const issueOtp = async ({ identifier, purpose }, { transaction } = {}) => {
+export const issueOtp = async ({ identifier, purpose, ttlSec }, { transaction } = {}) => {
   await OtpCode.update({ consumedAt: new Date() }, { where: { identifier, purpose, consumedAt: null }, transaction });
   const code = generateCode();
-  const expiresInSec = OTP_TTL_SEC[purpose];
+  const expiresInSec = ttlSec ?? OTP_TTL_SEC[purpose];
   const otp = await OtpCode.create(
     { identifier, purpose, codeHash: hashToken(code), expiresAt: new Date(Date.now() + expiresInSec * 1000) },
     { transaction },

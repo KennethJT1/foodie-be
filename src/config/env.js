@@ -7,6 +7,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   APP_URL: z.url(),
+  // Frontend base URL for links in emails (set-password, reset)
+  FRONTEND_URL: z.url().default('http://localhost:5173'),
   TZ: z.string().default('Africa/Lagos'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   // Comma-separated frontend origins allowed by CORS: dev server, Playwright, vite preview

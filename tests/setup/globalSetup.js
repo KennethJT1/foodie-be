@@ -17,7 +17,17 @@ export default async () => {
     password: config.password,
     ssl: config.dialectOptions.ssl,
   });
-  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${config.database}\``);
+  // Same collation as production (case- and accent-insensitive search). An old test database
+  // with another default is dropped: it only ever holds test data.
+  const [[existing]] = await connection.query(
+    'SELECT DEFAULT_COLLATION_NAME AS collation FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?',
+    [config.database],
+  );
+  if (existing && existing.collation !== 'utf8mb4_0900_ai_ci')
+    await connection.query(`DROP DATABASE \`${config.database}\``);
+  await connection.query(
+    `CREATE DATABASE IF NOT EXISTS \`${config.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`,
+  );
   await connection.end();
 
   execFileSync('npx', ['sequelize-cli', 'db:migrate'], {

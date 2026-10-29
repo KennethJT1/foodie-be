@@ -9,6 +9,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { loadOpenApiSpec } from './config/openapi.js';
 import { errorHandler, generalRateLimit, isHealthCheck, notFound, requestId } from './core/middlewares/index.js';
+import { BOARD_PATH, queueBoard } from './modules/admin/queueBoard.js';
 import healthRoutes from './modules/health/health.routes.js';
 import apiRoutes from './routes.js';
 
@@ -61,6 +62,7 @@ const openApiSpec = loadOpenApiSpec();
 app.get('/docs/openapi.json', (req, res) => res.json(openApiSpec));
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, { customSiteTitle: 'KJT Foodie API' }));
 
+app.use(BOARD_PATH, queueBoard());
 app.use('/api/v1', apiRoutes);
 
 app.use(notFound);
