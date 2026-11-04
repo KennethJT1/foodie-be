@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-04 · Current phase: **11** · Next up: **Phase 11 — Rider onboarding and admin rider review** (reuse `src/modules/onboarding/onboarding.shared.js`; confirm CI is green on the first push)
+Last updated: 2026-11-04 · Current phase: **12** · Next up: **Phase 12 — Plans, subscriptions, Paystack webhook** (confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -33,7 +33,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 8 | Uploads and audit log | 2 | 2/2 | ✅ |
 | 9 | Settings, banks, reference data, seeder core | 4 | 4/4 | ✅ |
 | 10 | Vendor onboarding and admin vendor review | 12 | 12/12 | ✅ |
-| 11 | Rider onboarding and admin rider review | 12 | 0/12 | ⬜ |
+| 11 | Rider onboarding and admin rider review | 12 | 12/12 | ✅ |
 | 12 | Plans, subscriptions, Paystack webhook | 14 | 0/14 | ⬜ |
 | 13 | Catalogue, vendor menu, store, staff | 16 | 0/16 | ⬜ |
 | 14 | Social, feed and moderation | 16 | 0/16 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **46/162** | |
+| | **Total** | **162** | **58/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -77,11 +77,12 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Uploads | `src/modules/uploads/*`, `src/integrations/cloudinary/{cloudinary.client,storage}.js`, `uploads` table | `POST /uploads`: multer in memory (8 MB → 413), type from the bytes (sharp / `%PDF-`), images → WebP (EXIF-rotated, metadata stripped, width cap per purpose, ≤2 MB), role per purpose (403), documents `type: private` with 1 h signed URLs; every file recorded in `uploads` (owner, purpose, public id). `storage` is replaceable in tests; `uploadUrl(upload)` re-signs private files |
 | Audit log | `src/core/audit/audit.js`, `src/modules/audit/*`, `audit_logs` table | `audit.log({ actor, action, targetType, targetId, summary, req }, { transaction })` (actor null → System); `GET /admin/audit-log` (`audit_log.view`). Phase 7 actions write `admin_user.created/updated`, `role.updated/reset` |
 | API router | `src/routes.js` | Empty; modules mount here |
-| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, then `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours) |
+| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), then `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank) |
 | Settings | `src/modules/settings/*`, tables `settings` (key → JSON), `service_areas`, `notification_templates`, `required_documents` | `getSettings()` (Redis 10 min, defaults in code for missing keys), `updateSettings()` (mock bounds + wording, max fee ≥ base fee, audited), `invalidateSettings()`, `requiredDocuments(appliesTo)`. `GET`/`PATCH /admin/settings` (`settings.manage`) |
 | Banks / Paystack | `src/modules/banks/*`, `src/integrations/paystack/paystack.client.js`, table `banks` | `paystack.listBanks / resolveAccount / createSubaccount` (replaceable in tests); `GET /banks` (public) and `POST /banks/resolve` (signed in, 10/min per user): Paystack in production with the list refreshed daily into `banks`, seeded list + fake lookup elsewhere |
 | Vendor onboarding | `src/modules/vendors/{onboarding.service,vendors.presenter,vendors.routes}.js`, `src/modules/onboarding/onboarding.shared.js`, tables `vendor_documents`, `vendor_opening_hours`, `vendor_bank_accounts`, `bank_change_requests` + storefront columns on `vendors` | `/vendor/onboarding` (get, one step per PATCH, submit), `/vendor/documents` (attach / remove). Shared with riders: forward-only steps (`advanceStep`), `assertEditable` (draft / rejected), `ownUpload` (URL → the caller's own upload of that purpose), `resolveBank`, `notifyReviewers`, `decide()` for approve / reject / suspend / reinstate. Submit adds default opening hours when the store has none |
 | Admin vendors | `src/modules/vendors/adminVendors.service.js` | `/admin/vendors` list / detail / approve / reject / suspend / reinstate / bank-change; `ensureSubaccount()` (best effort at approval, again at checkout); `DETAIL_EXTENSIONS` / `ROW_INCLUDES` let later phases add plan, menu and order numbers to the detail |
+| Riders | `src/modules/riders/*`, tables `rider_documents`, `rider_bank_accounts` + vehicle / guarantor / review / position columns on `riders` | `/rider/onboarding` (vehicle → guarantor → documents → bank → review), `/rider/documents`, `GET /rider/me` (bank as last 4 digits, `payoutPct` from settings); `/admin/riders` list (filters incl. `online`) / detail / approve / reject / suspend (also goes offline) / reinstate. `isBusy` and `recentTrips` wait for deliveries (phase 17) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
@@ -222,23 +223,23 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `POST /admin/vendors/{id}/reinstate`
   - [x] `POST /admin/vendors/{id}/bank-change/{decision}`
 
-### Phase 11 — Rider onboarding and admin rider review ⬜
+### Phase 11 — Rider onboarding and admin rider review ✅
 
-- [ ] Tables: riders, rider_documents, rider bank accounts, guarantor
-- [ ] Seed: Tunde, Kemi + 34 riders
+- [x] Tables: riders, rider_documents, rider bank accounts, guarantor
+- [x] Seed: Tunde, Kemi + 34 riders
 - Endpoints:
-  - [ ] `GET /rider/onboarding`
-  - [ ] `PATCH /rider/onboarding`
-  - [ ] `POST /rider/onboarding/submit`
-  - [ ] `POST /rider/documents`
-  - [ ] `DELETE /rider/documents/{id}`
-  - [ ] `GET /rider/me`
-  - [ ] `GET /admin/riders`
-  - [ ] `GET /admin/riders/{id}`
-  - [ ] `POST /admin/riders/{id}/approve`
-  - [ ] `POST /admin/riders/{id}/reject`
-  - [ ] `POST /admin/riders/{id}/suspend`
-  - [ ] `POST /admin/riders/{id}/reinstate`
+  - [x] `GET /rider/onboarding`
+  - [x] `PATCH /rider/onboarding`
+  - [x] `POST /rider/onboarding/submit`
+  - [x] `POST /rider/documents`
+  - [x] `DELETE /rider/documents/{id}`
+  - [x] `GET /rider/me`
+  - [x] `GET /admin/riders`
+  - [x] `GET /admin/riders/{id}`
+  - [x] `POST /admin/riders/{id}/approve`
+  - [x] `POST /admin/riders/{id}/reject`
+  - [x] `POST /admin/riders/{id}/suspend`
+  - [x] `POST /admin/riders/{id}/reinstate`
 
 ### Phase 12 — Plans, subscriptions, Paystack webhook ⬜
 
@@ -486,6 +487,8 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-04 | Bank account numbers are stored in plain text for now | Encryption at rest is listed for phase 22 hardening |
 | 2026-11-04 | Unknown wizard `step` → 422 `fieldErrors.step` (mock: 400); location city must be an active service area (stored with its own spelling); unfinished submit → 422 with `fieldErrors` keyed by step | Field errors are easier to show; the form only offers service-area cities |
 | 2026-11-04 | Approval decisions and "new application" notices use notification `type: system` (the mock sends `vendor`, `rider`, `vendor_submitted`, `rider_submitted`) | The contract's `Notification.type` enum (and the column) only has order, refund, social, review, subscription, payout, system |
+| 2026-11-04 | Rider vehicle types are `motorcycle`, `bicycle`, `car` (handoff 8.4 says "motorbike") | Contract and mock use motorcycle |
+| 2026-11-04 | One payout account per rider (`rider_bank_accounts.rider_id` unique), replaced in place while editing | Riders are paid by monthly transfer; no split subaccount or approval flow for changes in the contract |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -507,6 +510,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-04 | 11 | Rider onboarding (5 endpoints + `/rider/me`) and admin rider review (6 endpoints) on the shared onboarding helpers; rider tables and columns; `riders` seed step (36 riders); Postman "Rider onboarding" and "Admin · Riders" folders; rider endpoints in the permission matrix. |
 | 2026-11-04 | 10 | Vendor onboarding (5 endpoints) and admin vendor review (7 endpoints); 4 new tables + storefront columns; shared onboarding helpers; `vendors` seed step (48 vendors with documents, banks, hours); Postman "Vendor onboarding" and "Admin · Vendors" folders; vendor endpoints added to the permission matrix. |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |
 | 2026-10-29 | 9 | Settings (key/JSON rows + defaults, Redis cache, mock validation, audited), service areas / templates / required documents / banks tables, Paystack client, `GET`/`PATCH /admin/settings`, `GET /banks`, `POST /banks/resolve`, `reference` seed step (seeder now also closes Redis); Postman Banks folder + settings requests; 337 tests green; dev DB migrated and reseeded. |

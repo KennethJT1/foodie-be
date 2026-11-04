@@ -4,6 +4,7 @@ import { authenticate, requirePermission, requireRole, validate } from '../../co
 import * as controller from './admin.controller.js';
 import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
+import * as riders from '../riders/riders.controller.js';
 import * as vendors from '../vendors/vendors.controller.js';
 import { bankChangeParams, decisionBody } from '../vendors/vendors.schemas.js';
 
@@ -59,5 +60,18 @@ router.post(
   validate({ params: bankChangeParams }),
   asyncHandler(vendors.decideBankChange),
 );
+
+const ridersView = requirePermission('riders.view');
+const ridersApprove = requirePermission('riders.approve');
+router.get('/riders', ridersView, asyncHandler(riders.listRiders));
+router.get('/riders/:id', ridersView, validate({ params: idParams }), asyncHandler(riders.getRider));
+for (const action of ['approve', 'reject', 'suspend', 'reinstate']) {
+  router.post(
+    `/riders/:id/${action}`,
+    ridersApprove,
+    validate({ params: idParams, body: decisionBody }),
+    asyncHandler(riders.decide(action)),
+  );
+}
 
 export default router;

@@ -1,11 +1,11 @@
-// Demo accounts (handoff 8.2), Ada's two addresses and ~70 customers (handoff 8.4). Vendor
-// profiles are created by the vendors step.
+// Demo accounts (handoff 8.2), Ada's two addresses and ~70 customers (handoff 8.4). Vendor and
+// rider profiles are created by the vendors and riders steps.
 import { ensureAdminRoles, hashPassword } from '../../../core/auth/index.js';
 import { weighted } from '../../../core/utils/random.js';
 import { models } from '../../index.js';
 import { CITIES } from '../data/cities.js';
 
-const { User, Rider, Address } = models;
+const { User, Address } = models;
 
 export const DEMO_PASSWORD = 'password123';
 const DAY = 24 * 60 * 60 * 1000;
@@ -40,12 +40,6 @@ const DEMO_USERS = [
   ['usr_admin_finance', 'admin', 'Musa', 'Abdullahi', 'finance@kjtfoodie.test', null, 'finance'],
   ['usr_admin_dispatch', 'admin', 'Segun', 'Alabi', 'dispatch@kjtfoodie.test', null, 'dispatch'],
   ['usr_admin_onboarding', 'admin', 'Zainab', 'Bello', 'onboarding@kjtfoodie.test', null, 'onboarding'],
-];
-
-// Vendor profiles come from the vendors step; phase 11 moves the riders to their own step
-const DEMO_RIDERS = [
-  { id: 'rid_tunde', userId: 'usr_rider_tunde', approvalStatus: 'approved', isOnline: false },
-  { id: 'rid_new', userId: 'usr_rider_new' },
 ];
 
 /** Shared helpers for later steps: a weighted city and a point within `km` of its centre. */
@@ -92,7 +86,6 @@ export const users = async ({ transaction, faker, now }) => {
     })),
     { transaction },
   );
-  await Rider.bulkCreate(DEMO_RIDERS, { transaction });
 
   const lagos = CITIES[0];
   await Address.bulkCreate(

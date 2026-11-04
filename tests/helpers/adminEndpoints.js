@@ -23,3 +23,13 @@ ADMIN_ENDPOINTS.push(
   ['POST', '/api/v1/admin/vendors/ven_nobody/reinstate', 'vendors.approve'],
   ['POST', '/api/v1/admin/vendors/ven_nobody/bank-change/approve', 'vendors.approve'],
 );
+
+// Phase 11: rider review
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/riders', 'riders.view'],
+  ['GET', '/api/v1/admin/riders/rid_nobody', 'riders.view'],
+  ['POST', '/api/v1/admin/riders/rid_nobody/approve', 'riders.approve'],
+  ['POST', '/api/v1/admin/riders/rid_nobody/reject', 'riders.approve'],
+  ['POST', '/api/v1/admin/riders/rid_nobody/suspend', 'riders.approve'],
+  ['POST', '/api/v1/admin/riders/rid_nobody/reinstate', 'riders.approve'],
+);
