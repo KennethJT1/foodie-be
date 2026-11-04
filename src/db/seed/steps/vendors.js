@@ -1,17 +1,21 @@
 // Mama Put Kitchen, Chidi Grills and Tolu's Pot (handoff 8.2) and 45 more vendors (handoff 8.4):
 // storefront, documents (sample paperwork photo), settlement account and opening hours.
-// Logos, covers and dishes arrive with the catalogue (phase 13); subscriptions with phase 12.
+// Logos (square crops of a dish photo) and covers (real food stalls) are seed photos; dishes come
+// from the catalogue step, subscriptions from the subscriptions step.
 import { hashPassword } from '../../../core/auth/index.js';
 import { slugify } from '../../../core/utils/index.js';
 import { models, newId } from '../../index.js';
 import { CITIES } from '../data/cities.js';
-import { sampleDocumentUpload } from '../data/images.js';
+import { SEED_IMAGES } from '../data/images.js';
+import { mediaUrl, sampleDocumentUpload } from '../media.js';
 import { BANKS, REQUIRED_DOCUMENTS } from '../data/reference.js';
 import { VENDOR_DESCRIPTIONS, VENDOR_NAME_PARTS } from '../data/vendors.js';
 import { DEMO_PASSWORD, jitter, pickCity } from './users.js';
 
 const { User, Vendor, VendorDocument, VendorOpeningHour, VendorBankAccount, Upload } = models;
 const DAY = 24 * 60 * 60 * 1000;
+const LOGO_SOURCES = Object.values(SEED_IMAGES.dishes).map((photos) => photos[0].url);
+const COVER_SOURCES = SEED_IMAGES.vendorCovers.map((p) => p.url);
 
 export const REJECTION_REASON = 'The CAC certificate is not readable. Please upload a clearer photo.';
 
@@ -68,7 +72,10 @@ export const vendors = async ({ transaction, faker, now }) => {
   const hours = [];
 
   // A full storefront; `overrides` pins the demo vendors' handoff values
+  let variant = 0;
   const makeVendor = ({ id, owner, name, type, city = pickCity(faker), point, area, ...overrides }) => {
+    // Rotated by position (not faker), so photos never change the generated data
+    variant += 1;
     const vendorName = name ?? nextName();
     const vendorType = type ?? (faker.datatype.boolean(0.6) ? 'restaurant' : 'home_cook');
     const createdAt = faker.date.past({ years: 1, refDate: now - 20 * DAY });
@@ -80,6 +87,8 @@ export const vendors = async ({ transaction, faker, now }) => {
       slug: slugify(vendorName),
       type: vendorType,
       description: faker.helpers.arrayElement(VENDOR_DESCRIPTIONS),
+      logoUrl: mediaUrl('vendor_logo', LOGO_SOURCES[(variant * 7) % LOGO_SOURCES.length]),
+      coverUrl: mediaUrl('vendor_cover', COVER_SOURCES[variant % COVER_SOURCES.length]),
       phone: `+234${faker.helpers.arrayElement(['803', '806', '813', '816', '703', '706', '810', '814', '903', '905'])}${faker.string.numeric(7)}`,
       addressLine1: `${faker.number.int({ min: 1, max: 99 })} ${faker.location.street()}`,
       area: area ?? faker.helpers.arrayElement(city.areas),

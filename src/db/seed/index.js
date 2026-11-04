@@ -6,6 +6,8 @@ import { closeRedis } from '../../config/redis.js';
 import { createSeededFaker } from '../../core/utils/random.js';
 import { connectDatabase, sequelize } from '../index.js';
 import { truncateAllTables } from '../wipe.js';
+import { prepareMedia } from './media.js';
+import { catalogue } from './steps/catalogue.js';
 import { reference } from './steps/reference.js';
 import { riders } from './steps/riders.js';
 import { subscriptions } from './steps/subscriptions.js';
@@ -14,13 +16,15 @@ import { vendors } from './steps/vendors.js';
 
 // Run in order; each step is `async ({ sequelize, transaction, faker, now }) => void`. They share
 // one seeded Faker, so adding a step at the end never changes the data of the steps before it.
-const SEED_STEPS = [reference, users, vendors, riders, subscriptions];
+const SEED_STEPS = [reference, users, vendors, riders, subscriptions, catalogue];
 
 const run = async () => {
   // The demo world replaces real data; production gets its own reference-data seed (phase 22)
   if (env.NODE_ENV === 'production') throw new Error('Refusing to wipe and seed a production database');
 
   await connectDatabase();
+  // Photos first: downloads and uploads must not hold the seed transaction open
+  await prepareMedia();
   const wiped = await truncateAllTables(sequelize);
   logger.info(`Wiped ${wiped.length} tables in ${sequelize.config.database}`);
 

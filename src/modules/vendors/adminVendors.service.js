@@ -94,7 +94,7 @@ export const vendorDetail = async (vendorOrId, { transaction } = {}) => {
       bankChangeRequest: toBankChangeDto(bankChange),
       subscription: await subscriptionForVendor(vendor, { transaction }),
       followersCount: vendor.followersCount,
-      itemCount: 0,
+      itemCount: await models.FoodItem.count({ where: { vendorId: vendor.id }, transaction }),
       stats: { orders30d: 0, gmv30d: 0, openRefunds: 0 },
     },
     ...extensions,

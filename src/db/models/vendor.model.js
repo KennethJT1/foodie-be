@@ -63,6 +63,8 @@ export default (sequelize, DataTypes) => {
     Vendor.hasMany(models.VendorOpeningHour, { as: 'openingHours', foreignKey: 'vendorId' });
     Vendor.hasMany(models.VendorBankAccount, { as: 'bankAccounts', foreignKey: 'vendorId' });
     Vendor.hasMany(models.BankChangeRequest, { as: 'bankChangeRequests', foreignKey: 'vendorId' });
+    Vendor.hasMany(models.FoodItem, { as: 'foodItems', foreignKey: 'vendorId' });
+    Vendor.hasMany(models.VendorStaff, { as: 'staff', foreignKey: 'vendorId' });
   };
   return Vendor;
 };

@@ -55,3 +55,18 @@ export const requirePermission = (permission) => async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Public endpoints that personalise for a signed-in user (isLiked, distance from their default
+ * address): sets req.user when a valid Bearer token is sent, and carries on as a guest otherwise.
+ */
+export const optionalAuth = async (req, res, next) => {
+  const [scheme, token] = (req.get('Authorization') ?? '').split(' ');
+  if (scheme !== 'Bearer' || !token) return next();
+  try {
+    req.user = await userFromAccessToken(token);
+  } catch {
+    req.user = undefined;
+  }
+  next();
+};

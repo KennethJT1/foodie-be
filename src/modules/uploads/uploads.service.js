@@ -36,7 +36,7 @@ const detectType = async (buffer) => {
 };
 
 /** EXIF-rotated, resized, metadata (GPS) stripped, WebP under 2 MB. */
-const toWebp = async (buffer, maxWidth) => {
+export const toWebp = async (buffer, maxWidth) => {
   let out;
   for (const quality of WEBP_QUALITIES) {
     out = await sharp(buffer)

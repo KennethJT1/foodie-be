@@ -142,3 +142,18 @@ export const savePlan = async (actor, id, body, req) => {
   });
   return { plan: toPlanDto(saved, await getSettings()), created };
 };
+
+// A store without a plan yet works within Basic's limits (as the mock)
+const FALLBACK_LIMITS = { menuItems: 20, photosPerItem: 1, staff: 1, planName: 'Basic' };
+
+/** The vendor's plan limits (BRD section 4): menu items (null = unlimited), photos per item, staff. */
+export const planLimitsFor = async (vendor, { transaction } = {}) => {
+  const plan = vendor.planId ? await Plan.findByPk(vendor.planId, { transaction }) : null;
+  if (!plan) return { ...FALLBACK_LIMITS };
+  return {
+    menuItems: plan.menuItemsLimit,
+    photosPerItem: plan.photosPerItem,
+    staff: plan.staffLimit,
+    planName: plan.name,
+  };
+};

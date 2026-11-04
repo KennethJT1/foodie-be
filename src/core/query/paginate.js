@@ -14,12 +14,16 @@ export const pageMeta = ({ page, limit, total }) => {
 export const paginate = async (Model, listQuery, options = {}) => {
   const { where, order, include, limit } = listQuery;
 
-  // distinct keeps hasMany includes from inflating the count
-  const total = await Model.count({ where, include, distinct: true, col: 'id', ...options });
+  // distinct keeps hasMany includes from inflating the count; `attributes` is for the rows only
+  // (a count with them selected fails under ONLY_FULL_GROUP_BY)
+  const { attributes, ...countOptions } = options;
+  const total = await Model.count({ where, include, distinct: true, col: 'id', ...countOptions });
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const page = Math.min(listQuery.page, totalPages);
 
   const data =
-    total === 0 ? [] : await Model.findAll({ where, order, include, limit, offset: (page - 1) * limit, ...options });
+    total === 0
+      ? []
+      : await Model.findAll({ where, order, include, limit, offset: (page - 1) * limit, attributes, ...countOptions });
   return { data, meta: pageMeta({ page, limit, total }) };
 };

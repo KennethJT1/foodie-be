@@ -4,6 +4,11 @@ import addressRoutes from './modules/addresses/addresses.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import bankRoutes from './modules/banks/banks.routes.js';
+import {
+  categoryRoutes,
+  foodItemRoutes,
+  vendorRoutes as publicVendorRoutes,
+} from './modules/catalogue/catalogue.routes.js';
 import { liveness } from './modules/health/health.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import uploadRoutes from './modules/uploads/uploads.routes.js';
@@ -25,6 +30,9 @@ router.use('/notifications', authenticate, notificationRoutes);
 router.use('/uploads', uploadRoutes);
 router.use('/banks', bankRoutes);
 router.get('/plans', asyncHandler(subscriptions.listPlans));
+router.use('/categories', categoryRoutes);
+router.use('/food-items', foodItemRoutes);
+router.use('/vendors', publicVendorRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/vendor', vendorRoutes);
 router.use('/rider', riderRoutes);

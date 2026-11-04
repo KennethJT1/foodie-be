@@ -62,7 +62,7 @@ export const getOnboarding = async (user) => present(await ownVendor(user));
 const text = (value) => String(value ?? '').trim();
 
 /** A logo / cover URL: unchanged, cleared, or one of the owner's own uploads for that purpose. */
-const imageField = async (user, value, current, purpose, field, transaction) => {
+export const imageField = async (user, value, current, purpose, field, transaction) => {
   if (value === undefined || value === current) return current ?? null;
   if (value === null || value === '') return null;
   return (await ownUpload(user, value, purpose, { transaction, field })).url;

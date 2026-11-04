@@ -46,3 +46,49 @@ export const createUpload = async (user, purpose) => {
     bytes: 1000,
   });
 };
+
+/**
+ * A public store (approved, live plan, a Yaba pin, open every day all day) with its owner.
+ * `vendor` overrides vendor columns.
+ */
+export const createPublicVendor = async ({ vendor, ...user } = {}) => {
+  const owner = await createUser({ role: 'vendor', ...user });
+  const row = await models.Vendor.findOne({ where: { ownerUserId: owner.id } });
+  n += 1;
+  await row.update({
+    name: `Store ${n}`,
+    slug: `store-${n}-${Date.now()}`,
+    type: 'restaurant',
+    approvalStatus: 'approved',
+    subscriptionStatus: 'active',
+    planId: 'plan_pro',
+    addressLine1: '1 Herbert Macaulay Way',
+    area: 'Yaba',
+    city: 'Lagos',
+    state: 'Lagos',
+    lat: 6.5158,
+    lng: 3.3794,
+    deliveryRadiusKm: 10,
+    ...vendor,
+  });
+  await models.VendorOpeningHour.bulkCreate(
+    [0, 1, 2, 3, 4, 5, 6].map((day) => ({ vendorId: row.id, day, opensAt: '00:00', closesAt: '23:59' })),
+  );
+  return { owner, vendor: row };
+};
+
+/** A dish on `vendor`'s menu (category must exist: seed CATEGORIES first). */
+export const createFoodItem = (vendor, overrides = {}) => {
+  n += 1;
+  return models.FoodItem.create({
+    vendorId: vendor.id,
+    categoryId: 'cat-rice',
+    name: `Dish ${n}`,
+    slug: `dish-${n}`,
+    description: 'Tasty',
+    price: 250000,
+    photos: [`https://res.cloudinary.com/test/image/upload/dish-${n}.webp`],
+    optionGroups: [],
+    ...overrides,
+  });
+};

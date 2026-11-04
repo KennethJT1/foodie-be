@@ -4,7 +4,7 @@ import { hashPassword } from '../../../core/auth/index.js';
 import { slugify } from '../../../core/utils/index.js';
 import { models, newId } from '../../index.js';
 import { CITIES } from '../data/cities.js';
-import { sampleDocumentUpload } from '../data/images.js';
+import { sampleDocumentUpload } from '../media.js';
 import { REQUIRED_DOCUMENTS } from '../data/reference.js';
 import { DEMO_PASSWORD, jitter, pickCity } from './users.js';
 import { makeBankAccount } from './vendors.js';
