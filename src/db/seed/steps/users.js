@@ -1,10 +1,11 @@
-// Demo accounts (handoff 8.2), Ada's two addresses and ~70 customers (handoff 8.4)
+// Demo accounts (handoff 8.2), Ada's two addresses and ~70 customers (handoff 8.4). Vendor
+// profiles are created by the vendors step.
 import { ensureAdminRoles, hashPassword } from '../../../core/auth/index.js';
 import { weighted } from '../../../core/utils/random.js';
 import { models } from '../../index.js';
 import { CITIES } from '../data/cities.js';
 
-const { User, Vendor, Rider, Address } = models;
+const { User, Rider, Address } = models;
 
 export const DEMO_PASSWORD = 'password123';
 const DAY = 24 * 60 * 60 * 1000;
@@ -41,35 +42,7 @@ const DEMO_USERS = [
   ['usr_admin_onboarding', 'admin', 'Zainab', 'Bello', 'onboarding@kjtfoodie.test', null, 'onboarding'],
 ];
 
-// Phase 10 / 12 fill in the storefront, documents, plan and subscription rows
-const DEMO_VENDORS = [
-  {
-    id: 'ven_mama_put',
-    ownerUserId: 'usr_vendor_bisi',
-    name: 'Mama Put Kitchen',
-    slug: 'mama-put-kitchen',
-    type: 'restaurant',
-    approvalStatus: 'approved',
-    onboardingStep: 'submitted',
-    subscriptionStatus: 'active',
-    planId: 'plan_pro',
-    trialUsed: true,
-  },
-  {
-    id: 'ven_expired',
-    ownerUserId: 'usr_vendor_expired',
-    name: 'Chidi Grills',
-    slug: 'chidi-grills',
-    type: 'restaurant',
-    approvalStatus: 'approved',
-    onboardingStep: 'submitted',
-    subscriptionStatus: 'expired',
-    planId: 'plan_basic',
-    trialUsed: true,
-  },
-  { id: 'ven_new', ownerUserId: 'usr_vendor_new', name: 'Tolu’s Pot', onboardingStep: 'type' },
-];
-
+// Vendor profiles come from the vendors step; phase 11 moves the riders to their own step
 const DEMO_RIDERS = [
   { id: 'rid_tunde', userId: 'usr_rider_tunde', approvalStatus: 'approved', isOnline: false },
   { id: 'rid_new', userId: 'usr_rider_new' },
@@ -119,7 +92,6 @@ export const users = async ({ transaction, faker, now }) => {
     })),
     { transaction },
   );
-  await Vendor.bulkCreate(DEMO_VENDORS, { transaction });
   await Rider.bulkCreate(DEMO_RIDERS, { transaction });
 
   const lagos = CITIES[0];

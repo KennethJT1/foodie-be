@@ -4,6 +4,8 @@ import { authenticate, requirePermission, requireRole, validate } from '../../co
 import * as controller from './admin.controller.js';
 import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
+import * as vendors from '../vendors/vendors.controller.js';
+import { bankChangeParams, decisionBody } from '../vendors/vendors.schemas.js';
 
 // Mounted at /admin. Every route names its permission (x-permission in the contract).
 const router = Router();
@@ -37,6 +39,25 @@ router.patch(
   settingsManage,
   validate({ body: updateSettingsBody }),
   asyncHandler(controller.updateSettings),
+);
+
+const vendorsView = requirePermission('vendors.view');
+const vendorsApprove = requirePermission('vendors.approve');
+router.get('/vendors', vendorsView, asyncHandler(vendors.listVendors));
+router.get('/vendors/:id', vendorsView, validate({ params: idParams }), asyncHandler(vendors.getVendor));
+for (const action of ['approve', 'reject', 'suspend', 'reinstate']) {
+  router.post(
+    `/vendors/:id/${action}`,
+    vendorsApprove,
+    validate({ params: idParams, body: decisionBody }),
+    asyncHandler(vendors.decide(action)),
+  );
+}
+router.post(
+  '/vendors/:id/bank-change/:decision',
+  vendorsApprove,
+  validate({ params: bankChangeParams }),
+  asyncHandler(vendors.decideBankChange),
 );
 
 export default router;

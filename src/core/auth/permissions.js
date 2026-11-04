@@ -118,3 +118,10 @@ export const ensureAdminRoles = async ({ transaction } = {}) => {
   );
   await invalidateRolePermissions(missing);
 };
+
+/** Active admins who hold `permission` now (who to tell about a new application, a dispute...). */
+export const adminsWithPermission = async (permission, { transaction } = {}) => {
+  const admins = await models.User.findAll({ where: { role: 'admin', status: 'active' }, transaction });
+  const allowed = await Promise.all(admins.map(async (u) => (await permissionsFor(u)).includes(permission)));
+  return admins.filter((u, i) => allowed[i]);
+};

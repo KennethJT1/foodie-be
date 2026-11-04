@@ -30,6 +30,13 @@ const call = async (method, path, { query, body } = {}) => {
   return json;
 };
 
+/**
+ * Whether money calls (subaccounts, transactions) go to Paystack: whenever a secret key is set,
+ * except in automated tests. Development uses the test keys (Paystack test mode); without a key,
+ * callers fall back to a local stand-in like the frontend mock. A function so tests can switch it.
+ */
+export const paystackMode = { live: () => Boolean(env.PAYSTACK_SECRET_KEY) && env.NODE_ENV !== 'test' };
+
 /** Paystack API (https://paystack.com/docs/api). An object so tests can replace methods. */
 export const paystack = {
   /** Every active Nigerian NGN bank: [{ code, name }]. Follows Paystack's cursor pages. */

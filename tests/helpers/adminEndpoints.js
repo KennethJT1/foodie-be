@@ -12,3 +12,14 @@ export const ADMIN_ENDPOINTS = [
   ['GET', '/api/v1/admin/settings', 'settings.manage'],
   ['PATCH', '/api/v1/admin/settings', 'settings.manage'],
 ];
+
+// Phase 10: vendor review
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/vendors', 'vendors.view'],
+  ['GET', '/api/v1/admin/vendors/ven_nobody', 'vendors.view'],
+  ['POST', '/api/v1/admin/vendors/ven_nobody/approve', 'vendors.approve'],
+  ['POST', '/api/v1/admin/vendors/ven_nobody/reject', 'vendors.approve'],
+  ['POST', '/api/v1/admin/vendors/ven_nobody/suspend', 'vendors.approve'],
+  ['POST', '/api/v1/admin/vendors/ven_nobody/reinstate', 'vendors.approve'],
+  ['POST', '/api/v1/admin/vendors/ven_nobody/bank-change/approve', 'vendors.approve'],
+);

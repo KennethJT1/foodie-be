@@ -28,3 +28,21 @@ export const createUser = async ({ vendor, rider, ...overrides } = {}) => {
 
 /** `Authorization` header value for a user. */
 export const bearer = (user) => `Bearer ${signAccessToken(user)}`;
+
+/** An `uploads` row as POST /uploads would leave it (no Cloudinary call); returns the row. */
+export const createUpload = async (user, purpose) => {
+  n += 1;
+  const isPrivate = purpose.endsWith('_document');
+  return models.Upload.create({
+    userId: user.id,
+    purpose,
+    publicId: `test/${purpose}/${n}`,
+    resourceType: 'image',
+    isPrivate,
+    format: 'webp',
+    url: `https://res.cloudinary.com/test/image/${isPrivate ? 'private' : 'upload'}/${purpose}-${n}-${Date.now()}.webp`,
+    width: 800,
+    height: 600,
+    bytes: 1000,
+  });
+};
