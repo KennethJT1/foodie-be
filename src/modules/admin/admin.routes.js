@@ -5,6 +5,8 @@ import * as controller from './admin.controller.js';
 import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
 import * as riders from '../riders/riders.controller.js';
+import * as subscriptions from '../subscriptions/subscriptions.controller.js';
+import { extendBody, planBody } from '../subscriptions/subscriptions.schemas.js';
 import * as vendors from '../vendors/vendors.controller.js';
 import { bankChangeParams, decisionBody } from '../vendors/vendors.schemas.js';
 
@@ -73,5 +75,23 @@ for (const action of ['approve', 'reject', 'suspend', 'reinstate']) {
     asyncHandler(riders.decide(action)),
   );
 }
+
+const subscriptionsView = requirePermission('subscriptions.view');
+const subscriptionsManage = requirePermission('subscriptions.manage');
+router.get('/plans', subscriptionsView, asyncHandler(subscriptions.listAdminPlans));
+router.post('/plans', subscriptionsManage, validate({ body: planBody }), asyncHandler(subscriptions.createPlan));
+router.patch(
+  '/plans/:id',
+  subscriptionsManage,
+  validate({ params: idParams, body: planBody }),
+  asyncHandler(subscriptions.updatePlan),
+);
+router.get('/subscriptions', subscriptionsView, asyncHandler(subscriptions.listAdminSubscriptions));
+router.post(
+  '/subscriptions/:id/extend',
+  subscriptionsManage,
+  validate({ params: idParams, body: extendBody }),
+  asyncHandler(subscriptions.extend),
+);
 
 export default router;

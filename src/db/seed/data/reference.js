@@ -29,3 +29,43 @@ export const REQUIRED_DOCUMENTS = {
     { type: 'guarantor_form', label: 'Signed guarantor form' },
   ],
 };
+
+/** Plans (handoff 8.3). Yearly prices come from the yearlyDiscountPct setting. */
+export const PLANS = [
+  {
+    id: 'plan_basic',
+    name: 'Basic',
+    monthlyPrice: 500000,
+    menuItemsLimit: 20,
+    photosPerItem: 1,
+    staffLimit: 1,
+    featured: 'none',
+    analytics: 'basic',
+    isPopular: false,
+    sortOrder: 1,
+  },
+  {
+    id: 'plan_pro',
+    name: 'Pro',
+    monthlyPrice: 1200000,
+    menuItemsLimit: 100,
+    photosPerItem: 3,
+    staffLimit: 3,
+    featured: 'occasional',
+    analytics: 'full',
+    isPopular: true,
+    sortOrder: 2,
+  },
+  {
+    id: 'plan_premium',
+    name: 'Premium',
+    monthlyPrice: 2500000,
+    menuItemsLimit: null,
+    photosPerItem: 5,
+    staffLimit: 10,
+    featured: 'priority',
+    analytics: 'export',
+    isPopular: false,
+    sortOrder: 3,
+  },
+];

@@ -57,6 +57,8 @@ export default (sequelize, DataTypes) => {
 
   Vendor.associate = (models) => {
     Vendor.belongsTo(models.User, { as: 'owner', foreignKey: 'ownerUserId' });
+    Vendor.belongsTo(models.Plan, { as: 'plan', foreignKey: 'planId' });
+    Vendor.hasOne(models.Subscription, { as: 'subscription', foreignKey: 'vendorId' });
     Vendor.hasMany(models.VendorDocument, { as: 'documents', foreignKey: 'vendorId' });
     Vendor.hasMany(models.VendorOpeningHour, { as: 'openingHours', foreignKey: 'vendorId' });
     Vendor.hasMany(models.VendorBankAccount, { as: 'bankAccounts', foreignKey: 'vendorId' });

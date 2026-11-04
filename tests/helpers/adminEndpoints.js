@@ -33,3 +33,12 @@ ADMIN_ENDPOINTS.push(
   ['POST', '/api/v1/admin/riders/rid_nobody/suspend', 'riders.approve'],
   ['POST', '/api/v1/admin/riders/rid_nobody/reinstate', 'riders.approve'],
 );
+
+// Phase 12: plans and subscriptions
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/plans', 'subscriptions.view'],
+  ['POST', '/api/v1/admin/plans', 'subscriptions.manage'],
+  ['PATCH', '/api/v1/admin/plans/plan_nobody', 'subscriptions.manage'],
+  ['GET', '/api/v1/admin/subscriptions', 'subscriptions.view'],
+  ['POST', '/api/v1/admin/subscriptions/sub_nobody/extend', 'subscriptions.manage'],
+);

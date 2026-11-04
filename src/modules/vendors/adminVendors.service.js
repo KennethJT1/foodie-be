@@ -9,18 +9,18 @@ import { lockForUpdate, models, withTransaction } from '../../db/index.js';
 import { paystack, paystackMode } from '../../integrations/paystack/paystack.client.js';
 import { notify } from '../notifications/notifications.service.js';
 import { decide, decisionMessage, toDocumentDto } from '../onboarding/onboarding.shared.js';
+import { subscriptionForVendor } from '../subscriptions/subscriptions.service.js';
 import { activeBankAccount } from './onboarding.service.js';
 import { toAddressDto, toAdminVendorRow, toBankChangeDto, toBankDto } from './vendors.presenter.js';
 
-const { Vendor, VendorDocument, BankChangeRequest, VendorBankAccount, User, Upload } = models;
+const { Vendor, VendorDocument, BankChangeRequest, VendorBankAccount, User, Upload, Plan } = models;
 
-// Extra pieces of the admin detail that later phases own (subscription: 12, menu: 13, orders: 15,
-// refunds: 19). Each is `async (vendor) => partial detail`; phases register theirs here.
+// Extra pieces of the admin detail that later phases own (menu: 13, orders: 15, refunds: 19). Each is `async (vendor) => partial detail`; phases register theirs here.
 export const DETAIL_EXTENSIONS = [];
 
 const ownerInclude = { model: User, as: 'owner', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] };
-// Phases add includes the row needs (the plan name in phase 12)
-export const ROW_INCLUDES = [ownerInclude];
+// Phases add includes the row needs
+export const ROW_INCLUDES = [ownerInclude, { model: Plan, as: 'plan', attributes: ['id', 'name'] }];
 
 // GET /admin/vendors (handoff section 3): search name, owner name, owner phone, city
 const listConfig = () => ({
@@ -92,7 +92,7 @@ export const vendorDetail = async (vendorOrId, { transaction } = {}) => {
       documents: documents.map(toDocumentDto),
       bank: toBankDto(bank),
       bankChangeRequest: toBankChangeDto(bankChange),
-      subscription: null,
+      subscription: await subscriptionForVendor(vendor, { transaction }),
       followersCount: vendor.followersCount,
       itemCount: 0,
       stats: { orders30d: 0, gmv30d: 0, openRefunds: 0 },

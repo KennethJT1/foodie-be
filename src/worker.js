@@ -4,10 +4,14 @@ import { closeRedis } from './config/redis.js';
 import { closeQueues, createWorker } from './core/queue/index.js';
 import { connectDatabase, sequelize } from './db/index.js';
 import { notificationProcessors } from './modules/notifications/notifications.jobs.js';
+import { paymentProcessors } from './modules/payments/payments.jobs.js';
+import { subscriptionProcessors } from './modules/subscriptions/subscriptions.jobs.js';
 
 // Queue name → processors by job name. Each phase registers its queue here.
 const PROCESSORS = {
   notifications: notificationProcessors,
+  payments: paymentProcessors,
+  subscriptions: subscriptionProcessors,
 };
 
 const SHUTDOWN_TIMEOUT_MS = 30_000;

@@ -80,4 +80,46 @@ export const paystack = {
     });
     return data.subaccount_code;
   },
+
+  /** Starts a transaction for the Paystack popup: { accessCode, authorizationUrl }. Amount in kobo. */
+  async initializeTransaction({ email, amount, reference, metadata, subaccount, transactionCharge }) {
+    const { data } = await call('POST', '/transaction/initialize', {
+      body: {
+        email,
+        amount,
+        reference,
+        metadata,
+        currency: 'NGN',
+        ...(subaccount && { subaccount, transaction_charge: transactionCharge, bearer: 'account' }),
+      },
+    });
+    return { accessCode: data.access_code, authorizationUrl: data.authorization_url };
+  },
+
+  /** What Paystack knows about a transaction (never trust the client or the webhook alone). */
+  async verifyTransaction(reference) {
+    const { data } = await call('GET', `/transaction/verify/${encodeURIComponent(reference)}`);
+    return toTransaction(data);
+  },
+
+  /** Charges a saved card (renewals). Returns the transaction; `status` may be failed. */
+  async chargeAuthorization({ authorizationCode, email, amount, reference, metadata }) {
+    const { data } = await call('POST', '/transaction/charge_authorization', {
+      body: { authorization_code: authorizationCode, email, amount, reference, metadata, currency: 'NGN' },
+    });
+    return toTransaction(data);
+  },
 };
+
+/** Paystack transaction → the fields we use. `status`: success, failed, abandoned, ongoing... */
+const toTransaction = (data) => ({
+  reference: data.reference,
+  status: data.status,
+  amount: data.amount,
+  currency: data.currency,
+  channel: data.channel ?? null,
+  fee: data.fees ?? 0,
+  paidAt: data.paid_at ? new Date(data.paid_at) : null,
+  authorizationCode: data.authorization?.reusable ? data.authorization.authorization_code : null,
+  email: data.customer?.email ?? null,
+});

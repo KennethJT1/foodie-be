@@ -107,7 +107,7 @@ export const vendors = async ({ transaction, faker, now }) => {
     accounts.push({ vendorId: vendor.id, ...makeBankAccount(faker, `${owner.firstName} ${owner.lastName}`) });
     for (const [sortOrder, doc] of REQUIRED_DOCUMENTS[vendorType].entries()) {
       const uploadId = newId();
-      uploads.push({ id: uploadId, ...sampleDocumentUpload(owner.id, 'vendor_document'), createdAt });
+      uploads.push({ ...sampleDocumentUpload(uploadId, owner.id, 'vendor_document'), createdAt });
       documents.push({
         vendorId: vendor.id,
         type: doc.type,

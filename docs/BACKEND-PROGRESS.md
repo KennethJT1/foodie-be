@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-04 · Current phase: **12** · Next up: **Phase 12 — Plans, subscriptions, Paystack webhook** (confirm CI is green on the first push)
+Last updated: 2026-11-04 · Current phase: **13** · Next up: **Phase 13 — Catalogue, vendor menu, store and staff** (use `isVendorPublic()` / `publicVendorWhere()` for every public read, plan limits from `plans`; copy seed images through the upload pipeline and repoint the sample documents; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -34,7 +34,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 9 | Settings, banks, reference data, seeder core | 4 | 4/4 | ✅ |
 | 10 | Vendor onboarding and admin vendor review | 12 | 12/12 | ✅ |
 | 11 | Rider onboarding and admin rider review | 12 | 12/12 | ✅ |
-| 12 | Plans, subscriptions, Paystack webhook | 14 | 0/14 | ⬜ |
+| 12 | Plans, subscriptions, Paystack webhook | 14 | 14/14 | ✅ |
 | 13 | Catalogue, vendor menu, store, staff | 16 | 0/16 | ⬜ |
 | 14 | Social, feed and moderation | 16 | 0/16 | ⬜ |
 | 15 | Checkout, payments, orders, vendor sales | 18 | 0/18 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **58/162** | |
+| | **Total** | **162** | **72/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -77,12 +77,15 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Uploads | `src/modules/uploads/*`, `src/integrations/cloudinary/{cloudinary.client,storage}.js`, `uploads` table | `POST /uploads`: multer in memory (8 MB → 413), type from the bytes (sharp / `%PDF-`), images → WebP (EXIF-rotated, metadata stripped, width cap per purpose, ≤2 MB), role per purpose (403), documents `type: private` with 1 h signed URLs; every file recorded in `uploads` (owner, purpose, public id). `storage` is replaceable in tests; `uploadUrl(upload)` re-signs private files |
 | Audit log | `src/core/audit/audit.js`, `src/modules/audit/*`, `audit_logs` table | `audit.log({ actor, action, targetType, targetId, summary, req }, { transaction })` (actor null → System); `GET /admin/audit-log` (`audit_log.view`). Phase 7 actions write `admin_user.created/updated`, `role.updated/reset` |
 | API router | `src/routes.js` | Empty; modules mount here |
-| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), then `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank) |
+| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank), then `subscriptions` (from each vendor's plan status; Mama Put Pro monthly renews in 9 days; invoices + matching subscription payments). `reference` also seeds the 3 plans |
 | Settings | `src/modules/settings/*`, tables `settings` (key → JSON), `service_areas`, `notification_templates`, `required_documents` | `getSettings()` (Redis 10 min, defaults in code for missing keys), `updateSettings()` (mock bounds + wording, max fee ≥ base fee, audited), `invalidateSettings()`, `requiredDocuments(appliesTo)`. `GET`/`PATCH /admin/settings` (`settings.manage`) |
 | Banks / Paystack | `src/modules/banks/*`, `src/integrations/paystack/paystack.client.js`, table `banks` | `paystack.listBanks / resolveAccount / createSubaccount` (replaceable in tests); `GET /banks` (public) and `POST /banks/resolve` (signed in, 10/min per user): Paystack in production with the list refreshed daily into `banks`, seeded list + fake lookup elsewhere |
 | Vendor onboarding | `src/modules/vendors/{onboarding.service,vendors.presenter,vendors.routes}.js`, `src/modules/onboarding/onboarding.shared.js`, tables `vendor_documents`, `vendor_opening_hours`, `vendor_bank_accounts`, `bank_change_requests` + storefront columns on `vendors` | `/vendor/onboarding` (get, one step per PATCH, submit), `/vendor/documents` (attach / remove). Shared with riders: forward-only steps (`advanceStep`), `assertEditable` (draft / rejected), `ownUpload` (URL → the caller's own upload of that purpose), `resolveBank`, `notifyReviewers`, `decide()` for approve / reject / suspend / reinstate. Submit adds default opening hours when the store has none |
 | Admin vendors | `src/modules/vendors/adminVendors.service.js` | `/admin/vendors` list / detail / approve / reject / suspend / reinstate / bank-change; `ensureSubaccount()` (best effort at approval, again at checkout); `DETAIL_EXTENSIONS` / `ROW_INCLUDES` let later phases add plan, menu and order numbers to the detail |
 | Riders | `src/modules/riders/*`, tables `rider_documents`, `rider_bank_accounts` + vehicle / guarantor / review / position columns on `riders` | `/rider/onboarding` (vehicle → guarantor → documents → bank → review), `/rider/documents`, `GET /rider/me` (bank as last 4 digits, `payoutPct` from settings); `/admin/riders` list (filters incl. `online`) / detail / approve / reject / suspend (also goes offline) / reinstate. `isBusy` and `recentTrips` wait for deliveries (phase 17) |
+| Plans and subscriptions | `src/modules/subscriptions/*`, tables `plans`, `subscriptions` (one per vendor), `subscription_invoices` | `GET /plans` (public, meta trialDays / yearlyDiscountPct); `/vendor/subscription` get / invoices / trial / initialize / verify / change / cancel / resume; `/admin/plans` (vendorCount, one popular, audited) and `/admin/subscriptions` list / extend. `quoteChange()` (new, same, upgrade prorated with ₦100 minimum, downgrade), `confirmSubscriptionPayment()` (idempotent, row-locked, amount checked) shared by verify and the webhook. `vendors.subscription_status` mirrors the subscription and is what public reads filter on |
+| Payments and webhook | `src/modules/payments/*`, tables `payments` (subscription now, orders in phase 15), `payment_events` | `POST /webhooks/paystack`: HMAC-SHA512 over the raw body (401 otherwise), stored once by `event:data.id`, 200, `payments:webhook.process` job; `charge.success` for a plan payment activates it |
+| Renewal sweep | `subscriptions.scan` (scheduler: hourly at :05), `src/modules/vendors/visibility.js` | 7-day and 1-day reminders (in-app + email with the `subscription_reminder` template), trial / cancelled plans end → expired, active plans renew by charging the saved card (Paystack live) or go to grace for `graceDays`, grace ends → expired. `isVendorPublic()` / `publicVendorWhere()` for phase 13 public reads |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
@@ -241,27 +244,27 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `POST /admin/riders/{id}/suspend`
   - [x] `POST /admin/riders/{id}/reinstate`
 
-### Phase 12 — Plans, subscriptions, Paystack webhook ⬜
+### Phase 12 — Plans, subscriptions, Paystack webhook ✅
 
-- [ ] Tables: plans, subscriptions, subscription_invoices, payments, payment_events
-- [ ] `POST /webhooks/paystack` (signature, dedupe, queue) — not in the 162
-- [ ] Scheduler: reminders, grace, expiry; `isVendorPublic()` helper
-- [ ] Seed: 3 plans, subscriptions mix, invoices + payments
+- [x] Tables: plans, subscriptions, subscription_invoices, payments, payment_events
+- [x] `POST /webhooks/paystack` (signature, dedupe, queue) — not in the 162
+- [x] Scheduler: reminders, grace, expiry; `isVendorPublic()` helper
+- [x] Seed: 3 plans, subscriptions mix, invoices + payments
 - Endpoints:
-  - [ ] `GET /plans`
-  - [ ] `GET /vendor/subscription`
-  - [ ] `GET /vendor/subscription/invoices`
-  - [ ] `POST /vendor/subscription/trial`
-  - [ ] `POST /vendor/subscription/initialize`
-  - [ ] `POST /vendor/subscription/verify`
-  - [ ] `POST /vendor/subscription/change`
-  - [ ] `POST /vendor/subscription/cancel`
-  - [ ] `POST /vendor/subscription/resume`
-  - [ ] `GET /admin/plans`
-  - [ ] `POST /admin/plans`
-  - [ ] `PATCH /admin/plans/{id}`
-  - [ ] `GET /admin/subscriptions`
-  - [ ] `POST /admin/subscriptions/{id}/extend`
+  - [x] `GET /plans`
+  - [x] `GET /vendor/subscription`
+  - [x] `GET /vendor/subscription/invoices`
+  - [x] `POST /vendor/subscription/trial`
+  - [x] `POST /vendor/subscription/initialize`
+  - [x] `POST /vendor/subscription/verify`
+  - [x] `POST /vendor/subscription/change`
+  - [x] `POST /vendor/subscription/cancel`
+  - [x] `POST /vendor/subscription/resume`
+  - [x] `GET /admin/plans`
+  - [x] `POST /admin/plans`
+  - [x] `PATCH /admin/plans/{id}`
+  - [x] `GET /admin/subscriptions`
+  - [x] `POST /admin/subscriptions/{id}/extend`
 
 ### Phase 13 — Catalogue, vendor menu, store, staff ⬜
 
@@ -489,6 +492,13 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-04 | Approval decisions and "new application" notices use notification `type: system` (the mock sends `vendor`, `rider`, `vendor_submitted`, `rider_submitted`) | The contract's `Notification.type` enum (and the column) only has order, refund, social, review, subscription, payout, system |
 | 2026-11-04 | Rider vehicle types are `motorcycle`, `bicycle`, `car` (handoff 8.4 says "motorbike") | Contract and mock use motorcycle |
 | 2026-11-04 | One payout account per rider (`rider_bank_accounts.rider_id` unique), replaced in place while editing | Riders are paid by monthly transfer; no split subaccount or approval flow for changes in the contract |
+| 2026-11-04 | Plans are one table with `monthly_price`; the yearly price is computed from `yearlyDiscountPct` (no `plan_prices` / Paystack Plan codes) | Contract `Plan` + mock; a discount change applies to every plan at once |
+| 2026-11-04 | Billing uses one-off Paystack transactions per period, not Paystack recurring subscriptions: the reusable card from the last payment is charged at renewal by the hourly sweep; no card / failure → grace | Matches the contract's initialize / verify / upgrade flow (prorated upgrades are impossible with Paystack Plans) |
+| 2026-11-04 | `paystackMode.live()` = a secret key is set and not in tests. Without it (or in tests) initialize returns a local reference / access code and verify succeeds like the mock | Lets the frontend journeys run without Paystack; dev with test keys uses real Paystack test mode |
+| 2026-11-04 | A trial or a cancelled plan ends as `expired` (no grace); grace is only for an active plan whose renewal wasn't paid | BRD: grace follows a failed renewal |
+| 2026-11-04 | Verify with an unpaid / mismatched payment → 409 `INVALID_STATUS` ("We haven't received this payment yet…"); a short payment is flagged `amount_mismatch` and never activates | Contract lists only 200 / 404 for verify |
+| 2026-11-04 | Plan payments write audit `subscription.paid` (not in the handoff's list) | "Every money event" is audited |
+| 2026-11-04 | The plans migration clears `vendors.plan_id` before adding its FK | Earlier seeds stored plan ids before `plans` existed; reseed after migrating |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -510,6 +520,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-04 | 12 | Plans, vendor subscriptions (trial, pay / upgrade / downgrade / cancel / resume), admin plans and subscriptions (14 endpoints); payments + payment_events; Paystack webhook with signature check, dedupe and worker job; hourly renewal sweep; `isVendorPublic()`; plans in the reference seed and a `subscriptions` seed step; Postman "Subscriptions", "Admin · Plans and subscriptions" and "Webhooks" folders; plan endpoints in the permission matrix (162 cases green). Seed fix: sample document uploads get their own `public_id` / `url` (both unique). Dev DB migrated and reseeded (48 vendors, 36 riders, 40 subscriptions, 77 invoices). |
 | 2026-11-04 | 11 | Rider onboarding (5 endpoints + `/rider/me`) and admin rider review (6 endpoints) on the shared onboarding helpers; rider tables and columns; `riders` seed step (36 riders); Postman "Rider onboarding" and "Admin · Riders" folders; rider endpoints in the permission matrix. |
 | 2026-11-04 | 10 | Vendor onboarding (5 endpoints) and admin vendor review (7 endpoints); 4 new tables + storefront columns; shared onboarding helpers; `vendors` seed step (48 vendors with documents, banks, hours); Postman "Vendor onboarding" and "Admin · Vendors" folders; vendor endpoints added to the permission matrix. |
 | 2026-10-28 | 1–2 | Initial setup and core plumbing committed (`setup`, `p2`). Frontend handoff received; build plan rewritten against it; this progress file created. |

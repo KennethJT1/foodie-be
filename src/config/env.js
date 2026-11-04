@@ -76,7 +76,8 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().min(1).default('KJT Foodie <no-reply@kjtfoodie.com>'),
 
   // Bank list / account lookups use Paystack only in production (required there); elsewhere a
-  // seeded list and a fake lookup. Payments (phase 12) use the test keys in development.
+  // seeded list and a fake lookup. Money calls (subaccounts, plan payments) use Paystack whenever a
+  // key is set (test keys in development), except in automated tests.
   PAYSTACK_SECRET_KEY: z.string().optional(),
   PAYSTACK_PUBLIC_KEY: z.string().optional(),
   PAYSTACK_BASE_URL: z.url().default('https://api.paystack.co'),

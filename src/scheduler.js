@@ -6,7 +6,10 @@ import { closeQueues, getQueue } from './core/queue/index.js';
 
 // { id, queue, job, pattern } in Africa/Lagos time. Later phases add theirs
 // (auth.purgeTokens, subscriptions.scanRenewals, payments.reconcile...).
-export const SCHEDULES = [];
+export const SCHEDULES = [
+  // Renewal reminders, period ends (renew or grace) and grace ends (expired, store hidden)
+  { id: 'subscriptions-scan', queue: 'subscriptions', job: 'subscriptions.scan', pattern: '5 * * * *' },
+];
 
 const run = async () => {
   for (const { id, queue, job, pattern, data = {} } of SCHEDULES) {

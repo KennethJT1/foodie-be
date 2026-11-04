@@ -54,7 +54,7 @@ export const riders = async ({ transaction, faker, now }) => {
     accounts.push({ riderId: id, ...makeBankAccount(faker, `${user.firstName} ${user.lastName}`) });
     for (const [i, doc] of REQUIRED_DOCUMENTS.rider.entries()) {
       const uploadId = newId();
-      uploads.push({ id: uploadId, ...sampleDocumentUpload(user.id, 'rider_document'), createdAt });
+      uploads.push({ ...sampleDocumentUpload(uploadId, user.id, 'rider_document'), createdAt });
       documents.push({
         riderId: id,
         type: doc.type,

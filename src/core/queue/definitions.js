@@ -4,6 +4,14 @@ export const QUEUES = {
     concurrency: 20,
     jobOptions: { attempts: 5, backoff: { type: 'exponential', delay: 10_000 } },
   },
+  payments: {
+    concurrency: 5,
+    jobOptions: { attempts: 8, backoff: { type: 'exponential', delay: 30_000 } },
+  },
+  subscriptions: {
+    concurrency: 5,
+    jobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 60_000 } },
+  },
 };
 
 // Kept around for Bull Board and debugging, then trimmed

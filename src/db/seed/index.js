@@ -8,12 +8,13 @@ import { connectDatabase, sequelize } from '../index.js';
 import { truncateAllTables } from '../wipe.js';
 import { reference } from './steps/reference.js';
 import { riders } from './steps/riders.js';
+import { subscriptions } from './steps/subscriptions.js';
 import { users } from './steps/users.js';
 import { vendors } from './steps/vendors.js';
 
 // Run in order; each step is `async ({ sequelize, transaction, faker, now }) => void`. They share
 // one seeded Faker, so adding a step at the end never changes the data of the steps before it.
-const SEED_STEPS = [reference, users, vendors, riders];
+const SEED_STEPS = [reference, users, vendors, riders, subscriptions];
 
 const run = async () => {
   // The demo world replaces real data; production gets its own reference-data seed (phase 22)
