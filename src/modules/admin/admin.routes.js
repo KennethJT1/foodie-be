@@ -5,6 +5,8 @@ import * as controller from './admin.controller.js';
 import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
 import * as riders from '../riders/riders.controller.js';
+import * as social from '../social/social.controller.js';
+import { resolveBody } from '../social/social.schemas.js';
 import * as subscriptions from '../subscriptions/subscriptions.controller.js';
 import { extendBody, planBody } from '../subscriptions/subscriptions.schemas.js';
 import * as vendors from '../vendors/vendors.controller.js';
@@ -92,6 +94,15 @@ router.post(
   subscriptionsManage,
   validate({ params: idParams, body: extendBody }),
   asyncHandler(subscriptions.extend),
+);
+
+const moderation = requirePermission('moderation.manage');
+router.get('/reports', moderation, asyncHandler(social.listReports));
+router.post(
+  '/reports/:id/resolve',
+  moderation,
+  validate({ params: idParams, body: resolveBody }),
+  asyncHandler(social.resolveReport),
 );
 
 export default router;

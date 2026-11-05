@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../core/http/index.js';
 import { authenticate, requireRole, validate } from '../../core/middlewares/index.js';
+import { vendorSocialRoutes } from '../social/social.routes.js';
 import storeRoutes from '../store/store.routes.js';
 import subscriptionRoutes from '../subscriptions/subscriptions.routes.js';
 import * as controller from './vendors.controller.js';
@@ -18,5 +19,6 @@ router.post('/documents', validate({ body: documentBody }), asyncHandler(control
 router.delete('/documents/:id', validate({ params: idParams }), asyncHandler(controller.removeDocument));
 router.use('/subscription', subscriptionRoutes);
 router.use(storeRoutes);
+router.use(vendorSocialRoutes);
 
 export default router;

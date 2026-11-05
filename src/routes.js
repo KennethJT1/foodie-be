@@ -14,6 +14,14 @@ import notificationRoutes from './modules/notifications/notifications.routes.js'
 import uploadRoutes from './modules/uploads/uploads.routes.js';
 import webhookRoutes from './modules/payments/webhook.routes.js';
 import riderRoutes from './modules/riders/riders.routes.js';
+import {
+  commentRoutes,
+  feedRoutes,
+  foodItemSocialRoutes,
+  meSocialRoutes,
+  reportRoutes,
+  vendorFollowRoutes,
+} from './modules/social/social.routes.js';
 import * as subscriptions from './modules/subscriptions/subscriptions.controller.js';
 import { asyncHandler } from './core/http/index.js';
 import userRoutes from './modules/users/users.routes.js';
@@ -24,6 +32,7 @@ const router = Router();
 
 router.get('/health', liveness);
 router.use('/auth', authRoutes);
+router.use('/me', meSocialRoutes);
 router.use('/me', userRoutes);
 router.use('/addresses', addressRoutes);
 router.use('/notifications', authenticate, notificationRoutes);
@@ -31,7 +40,12 @@ router.use('/uploads', uploadRoutes);
 router.use('/banks', bankRoutes);
 router.get('/plans', asyncHandler(subscriptions.listPlans));
 router.use('/categories', categoryRoutes);
+router.use('/feed', feedRoutes);
+router.use('/food-items', foodItemSocialRoutes);
 router.use('/food-items', foodItemRoutes);
+router.use('/comments', commentRoutes);
+router.use('/reports', reportRoutes);
+router.use('/vendors', vendorFollowRoutes);
 router.use('/vendors', publicVendorRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/vendor', vendorRoutes);

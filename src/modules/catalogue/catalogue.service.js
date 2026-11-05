@@ -16,6 +16,7 @@ const { Category, FoodItem, Vendor, VendorOpeningHour, Address } = models;
 
 const VENDOR_ATTRIBUTES = [
   'id',
+  'ownerUserId',
   'name',
   'slug',
   'type',
@@ -192,7 +193,7 @@ const menuSummary = async (vendorIds) => {
   return map;
 };
 
-const serializeVendors = async (user, origin, vendors) => {
+export const serializeVendorsFor = async (user, origin, vendors) => {
   const ids = vendors.map((v) => v.id);
   const [ctx, menus] = await Promise.all([contextFor(user, origin, ids), menuSummary(ids)]);
   return vendors.map((v) => toPublicVendorDto(v, ctx, menus.get(v.id)));
@@ -221,7 +222,7 @@ export const listVendors = async (user, query) => {
   const listQuery = buildListQuery(query, vendorList(origin));
   listQuery.where = { [Op.and]: [listQuery.where, publicVendorWhere()] };
   const { data, meta } = await paginate(Vendor, listQuery, { attributes: VENDOR_ATTRIBUTES });
-  return { data: await serializeVendors(user, origin, data), meta };
+  return { data: await serializeVendorsFor(user, origin, data), meta };
 };
 
 /** GET /vendors/{slugOrId}: 404 when the store isn't public (BR-SUB-06). */
@@ -231,6 +232,6 @@ export const getVendor = async (user, slugOrId, query) => {
     attributes: VENDOR_ATTRIBUTES,
   });
   if (!vendor) throw new NotFoundError("This store isn't available right now.");
-  const [dto] = await serializeVendors(user, await originFor(user, query), [vendor]);
+  const [dto] = await serializeVendorsFor(user, await originFor(user, query), [vendor]);
   return dto;
 };

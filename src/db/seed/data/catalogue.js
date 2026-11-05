@@ -112,3 +112,27 @@ export const GROUPS_BY_CATEGORY = {
 export const PORTIONS = ['1 plate', '1 pack', 'Serves 1', 'Serves 2', '1 bowl'];
 
 export const STAFF_ROLES = ['manager', 'kitchen'];
+
+/** Customer comments (the frontend mock list) */
+export const COMMENT_LINES = [
+  'This jollof is everything 😍',
+  'Ordered twice this week, no regrets.',
+  'Portion was generous, thank you!',
+  'A bit too peppery for me but still sweet.',
+  'Best in Lagos, no cap.',
+  'Delivery was fast and the food was still hot.',
+  'Can I get it without onions?',
+  'Abeg add more meat next time 😅',
+  'Tastes like home. Well done!',
+  'Do you deliver to Ajah?',
+];
+
+export const VENDOR_REPLIES = [
+  'Thank you so much! 🙏',
+  'We appreciate you. See you next time!',
+  'Noted — we will do better.',
+  'Yes, we deliver there!',
+];
+
+export const COMMENT_REPORT_REASONS = ['Spam', 'Offensive language', 'Harassment', 'Misleading'];
+export const DISH_REPORT_REASONS = ['Photo is not the real food', 'Unsafe food', 'Prohibited item'];

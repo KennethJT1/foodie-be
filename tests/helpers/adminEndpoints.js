@@ -42,3 +42,9 @@ ADMIN_ENDPOINTS.push(
   ['GET', '/api/v1/admin/subscriptions', 'subscriptions.view'],
   ['POST', '/api/v1/admin/subscriptions/sub_nobody/extend', 'subscriptions.manage'],
 );
+
+// Phase 14: moderation
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/reports', 'moderation.manage'],
+  ['POST', '/api/v1/admin/reports/rep_nobody/resolve', 'moderation.manage'],
+);

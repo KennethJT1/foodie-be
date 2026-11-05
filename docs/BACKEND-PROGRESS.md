@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-04 · Current phase: **14** · Next up: **Phase 14 — Social, feed and moderation** (fill `src/modules/catalogue/personal.js` for isLiked / isFollowing; confirm CI is green on the first push)
+Last updated: 2026-11-04 · Current phase: **15** · Next up: **Phase 15 — Checkout, payments, orders, vendor sales** (confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -36,7 +36,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 11 | Rider onboarding and admin rider review | 12 | 12/12 | ✅ |
 | 12 | Plans, subscriptions, Paystack webhook | 14 | 14/14 | ✅ |
 | 13 | Catalogue, vendor menu, store, staff | 16 | 16/16 | ✅ |
-| 14 | Social, feed and moderation | 16 | 0/16 | ⬜ |
+| 14 | Social, feed and moderation | 16 | 16/16 | ✅ |
 | 15 | Checkout, payments, orders, vendor sales | 18 | 0/18 | ⬜ |
 | 16 | Real time (Socket.IO) | — | — | ⬜ |
 | 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 0/11 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **88/162** | |
+| | **Total** | **162** | **104/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -77,7 +77,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Uploads | `src/modules/uploads/*`, `src/integrations/cloudinary/{cloudinary.client,storage}.js`, `uploads` table | `POST /uploads`: multer in memory (8 MB → 413), type from the bytes (sharp / `%PDF-`), images → WebP (EXIF-rotated, metadata stripped, width cap per purpose, ≤2 MB), role per purpose (403), documents `type: private` with 1 h signed URLs; every file recorded in `uploads` (owner, purpose, public id). `storage` is replaceable in tests; `uploadUrl(upload)` re-signs private files |
 | Audit log | `src/core/audit/audit.js`, `src/modules/audit/*`, `audit_logs` table | `audit.log({ actor, action, targetType, targetId, summary, req }, { transaction })` (actor null → System); `GET /admin/audit-log` (`audit_log.view`). Phase 7 actions write `admin_user.created/updated`, `role.updated/reset` |
 | API router | `src/routes.js` | Empty; modules mount here |
-| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank), `subscriptions` (from each vendor's plan status; Mama Put Pro monthly renews in 9 days; invoices + matching subscription payments), then `catalogue` (12 categories, 287 dishes: Mama Put the first 14, others 5–10, photos up to the plan limit with credits; Mama Put's 2 staff). `reference` also seeds the 3 plans; vendors get real-photo logos and covers |
+| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank), `subscriptions` (from each vendor's plan status; Mama Put Pro monthly renews in 9 days; invoices + matching subscription payments), then `catalogue` (12 categories, 287 dishes: Mama Put the first 14, others 5–10, photos up to the plan limit with credits; Mama Put's 2 staff), then `social` (likes, follows, ~1,000 comments with 35% vendor replies, 9 comment + 3 dish reports; counters padded). `reference` also seeds the 3 plans; vendors get real-photo logos and covers |
 | Settings | `src/modules/settings/*`, tables `settings` (key → JSON), `service_areas`, `notification_templates`, `required_documents` | `getSettings()` (Redis 10 min, defaults in code for missing keys), `updateSettings()` (mock bounds + wording, max fee ≥ base fee, audited), `invalidateSettings()`, `requiredDocuments(appliesTo)`. `GET`/`PATCH /admin/settings` (`settings.manage`) |
 | Banks / Paystack | `src/modules/banks/*`, `src/integrations/paystack/paystack.client.js`, table `banks` | `paystack.listBanks / resolveAccount / createSubaccount` (replaceable in tests); `GET /banks` (public) and `POST /banks/resolve` (signed in, 10/min per user): Paystack in production with the list refreshed daily into `banks`, seeded list + fake lookup elsewhere |
 | Vendor onboarding | `src/modules/vendors/{onboarding.service,vendors.presenter,vendors.routes}.js`, `src/modules/onboarding/onboarding.shared.js`, tables `vendor_documents`, `vendor_opening_hours`, `vendor_bank_accounts`, `bank_change_requests` + storefront columns on `vendors` | `/vendor/onboarding` (get, one step per PATCH, submit), `/vendor/documents` (attach / remove). Shared with riders: forward-only steps (`advanceStep`), `assertEditable` (draft / rejected), `ownUpload` (URL → the caller's own upload of that purpose), `resolveBank`, `notifyReviewers`, `decide()` for approve / reject / suspend / reinstate. Submit adds default opening hours when the store has none |
@@ -86,9 +86,10 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Plans and subscriptions | `src/modules/subscriptions/*`, tables `plans`, `subscriptions` (one per vendor), `subscription_invoices` | `GET /plans` (public, meta trialDays / yearlyDiscountPct); `/vendor/subscription` get / invoices / trial / initialize / verify / change / cancel / resume; `/admin/plans` (vendorCount, one popular, audited) and `/admin/subscriptions` list / extend. `quoteChange()` (new, same, upgrade prorated with ₦100 minimum, downgrade), `confirmSubscriptionPayment()` (idempotent, row-locked, amount checked) shared by verify and the webhook. `vendors.subscription_status` mirrors the subscription and is what public reads filter on |
 | Payments and webhook | `src/modules/payments/*`, tables `payments` (subscription now, orders in phase 15), `payment_events` | `POST /webhooks/paystack`: HMAC-SHA512 over the raw body (401 otherwise), stored once by `event:data.id`, 200, `payments:webhook.process` job; `charge.success` for a plan payment activates it |
 | Renewal sweep | `subscriptions.scan` (scheduler: hourly at :05), `src/modules/vendors/visibility.js` | 7-day and 1-day reminders (in-app + email with the `subscription_reminder` template), trial / cancelled plans end → expired, active plans renew by charging the saved card (Paystack live) or go to grace for `graceDays`, grace ends → expired. `isVendorPublic()` / `publicVendorWhere()` for phase 13 public reads |
-| Catalogue | `src/modules/catalogue/*`, tables `categories`, `food_items` (photos, credits, option groups and days as JSON; counters; `is_hidden`; paranoid) | `GET /categories`, `/food-items` (search, filters incl. `maxDistanceKm`, sort `distanceM` via a SQL haversine), `/food-items/{id}`, `/vendors`, `/vendors/{slugOrId}`. Only `publicVendorWhere()` stores and non-hidden, non-deleted dishes. `optionalAuth` personalises; `originFor()` = lat/lng → default address → central Lagos; `isOpen` from opening hours in Lagos time (`core/utils/openingHours.js`). `personal.js` (isLiked / isFollowing) is empty until phase 14 |
+| Catalogue | `src/modules/catalogue/*`, tables `categories`, `food_items` (photos, credits, option groups and days as JSON; counters; `is_hidden`; paranoid) | `GET /categories`, `/food-items` (search, filters incl. `maxDistanceKm`, sort `distanceM` via a SQL haversine), `/food-items/{id}`, `/vendors`, `/vendors/{slugOrId}`. Only `publicVendorWhere()` stores and non-hidden, non-deleted dishes. `optionalAuth` personalises; `originFor()` = lat/lng → default address → central Lagos; `isOpen` from opening hours in Lagos time (`core/utils/openingHours.js`). `personal.js` gives isLiked / isFollowing for the page |
 | Vendor menu, store, staff | `src/modules/store/*`, table `vendor_staff` | `/vendor/menu` CRUD with plan limits (`planLimitsFor()`; 409 PLAN_LIMIT items, 422 photos; photos must be the vendor's own `food_photo` uploads or already on the item), `/vendor/store` (hours, pause, radius, prep, description, logo, cover), `/vendor/bank-change` (resolved, audited, reviewers told), `/vendor/staff` (plan staff limit) |
 | Seed photos | `src/db/seed/media.js`, `.seed-cache/` (git-ignored) | Downloads every seed photo once, stores it through the upload pipeline (WebP, resized, Cloudinary `seed/<kind>`), caches the URL in `.seed-cache/manifest.json`; logos are 400×400 centre crops of dish photos. `SEED_MEDIA=remote` skips it (Wikimedia URLs) |
+| Social and moderation | `src/modules/social/*`, tables `likes`, `follows`, `comments` (one level of vendor replies; `removed` / `hidden` flags), `reports` | `GET /feed` (cursor; nearby 1 km bands / popular score / newest / following, ranked in SQL), likes and follows (idempotent, counters in the same transaction), `/me/likes`, `/me/follows`, comments (500 chars; vendors reply on own dishes; edit / delete by the author), `POST /reports` (one open per person and target), `/vendor/engagement`, `/vendor/comments` (`answered` via EXISTS on vendor replies), `/admin/reports` list / resolve (settles every open report on the target; audited `comment.hidden|removed|report_dismissed`, `food_item.…`) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
@@ -291,27 +292,27 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `POST /vendor/staff`
   - [x] `DELETE /vendor/staff/{id}`
 
-### Phase 14 — Social, feed and moderation ⬜
+### Phase 14 — Social, feed and moderation ✅
 
-- [ ] Tables: likes, follows, comments, reports
-- [ ] Seed: likes, follows, comments + replies, open reports
+- [x] Tables: likes, follows, comments, reports
+- [x] Seed: likes, follows, comments + replies, open reports
 - Endpoints:
-  - [ ] `GET /feed`
-  - [ ] `POST /food-items/{id}/likes`
-  - [ ] `DELETE /food-items/{id}/likes`
-  - [ ] `GET /me/likes`
-  - [ ] `GET /food-items/{id}/comments`
-  - [ ] `POST /food-items/{id}/comments`
-  - [ ] `PATCH /comments/{id}`
-  - [ ] `DELETE /comments/{id}`
-  - [ ] `POST /reports`
-  - [ ] `POST /vendors/{id}/follow`
-  - [ ] `DELETE /vendors/{id}/follow`
-  - [ ] `GET /me/follows`
-  - [ ] `GET /vendor/engagement`
-  - [ ] `GET /vendor/comments`
-  - [ ] `GET /admin/reports`
-  - [ ] `POST /admin/reports/{id}/resolve`
+  - [x] `GET /feed`
+  - [x] `POST /food-items/{id}/likes`
+  - [x] `DELETE /food-items/{id}/likes`
+  - [x] `GET /me/likes`
+  - [x] `GET /food-items/{id}/comments`
+  - [x] `POST /food-items/{id}/comments`
+  - [x] `PATCH /comments/{id}`
+  - [x] `DELETE /comments/{id}`
+  - [x] `POST /reports`
+  - [x] `POST /vendors/{id}/follow`
+  - [x] `DELETE /vendors/{id}/follow`
+  - [x] `GET /me/follows`
+  - [x] `GET /vendor/engagement`
+  - [x] `GET /vendor/comments`
+  - [x] `GET /admin/reports`
+  - [x] `POST /admin/reports/{id}/resolve`
 
 ### Phase 15 — Checkout, payments, orders, vendor sales ⬜
 
@@ -502,6 +503,8 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-04 | Verify with an unpaid / mismatched payment → 409 `INVALID_STATUS` ("We haven't received this payment yet…"); a short payment is flagged `amount_mismatch` and never activates | Contract lists only 200 / 404 for verify |
 | 2026-11-04 | Plan payments write audit `subscription.paid` (not in the handoff's list) | "Every money event" is audited |
 | 2026-11-04 | The plans migration clears `vendors.plan_id` before adding its FK | Earlier seeds stored plan ids before `plans` existed; reseed after migrating |
+| 2026-11-05 | Comment, like and new-comment notifications use type `social`; moderation notices to vendors use `system` | Contract notification enum (the mock sends `moderation`) |
+| 2026-11-05 | Dismissing a report audits `comment.report_dismissed` / `food_item.report_dismissed` (as the mock); the handoff lists only hidden / removed | Every admin decision is logged |
 | 2026-11-05 | Food items keep `photos`, `photo_credits`, `option_groups` and `available_days` as JSON columns, not child tables | Never filtered on; orders copy the chosen options; the frontend sends them whole |
 | 2026-11-05 | Distances are computed in SQL with a haversine expression (`distanceSql()`), not a spatial index | TiDB (dev DB) has no ST_Distance_Sphere / spatial indexes; fine at this size, revisit with Redis GEO in phase 17 |
 | 2026-11-05 | Seed photos are uploaded to Cloudinary once and reused via `.seed-cache/manifest.json`; a photo that can't be copied falls back to its Wikimedia URL with a warning | Handoff 8.1: no hot-linking, re-seeds must not re-download. Wikimedia rate-limits (429), so downloads retry with Retry-After and run two at a time |
@@ -531,6 +534,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-05 | 14 | Feed, likes, follows, comments, reports, vendor engagement / comments and admin moderation (16 endpoints); likes, follows, comments, reports tables; isLiked / isFollowing on catalogue reads; `social` seed step; Postman "Social" and "Admin · Moderation" folders; moderation endpoints in the permission matrix. Dev DB migrated and reseeded. |
 | 2026-11-05 | 13 | Catalogue (5 public endpoints), vendor menu (5), store + bank change (3) and staff (3); categories, food_items, vendor_staff; seed photos copied to Cloudinary once (123 files, cached); `catalogue` seed step (287 dishes); `optionalAuth`, `distanceSql()`, Lagos opening-hours check; `paginate()` count fix; Postman "Catalogue" and "Vendor menu, store and staff" folders. Dev DB migrated and reseeded. |
 | 2026-11-04 | 12 | Plans, vendor subscriptions (trial, pay / upgrade / downgrade / cancel / resume), admin plans and subscriptions (14 endpoints); payments + payment_events; Paystack webhook with signature check, dedupe and worker job; hourly renewal sweep; `isVendorPublic()`; plans in the reference seed and a `subscriptions` seed step; Postman "Subscriptions", "Admin · Plans and subscriptions" and "Webhooks" folders; plan endpoints in the permission matrix (162 cases green). Seed fix: sample document uploads get their own `public_id` / `url` (both unique). Dev DB migrated and reseeded (48 vendors, 36 riders, 40 subscriptions, 77 invoices). |
 | 2026-11-04 | 11 | Rider onboarding (5 endpoints + `/rider/me`) and admin rider review (6 endpoints) on the shared onboarding helpers; rider tables and columns; `riders` seed step (36 riders); Postman "Rider onboarding" and "Admin · Riders" folders; rider endpoints in the permission matrix. |
