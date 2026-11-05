@@ -9,6 +9,9 @@ import { closeQueues, getQueue } from './core/queue/index.js';
 export const SCHEDULES = [
   // Renewal reminders, period ends (renew or grace) and grace ends (expired, store hidden)
   { id: 'subscriptions-scan', queue: 'subscriptions', job: 'subscriptions.scan', pattern: '5 * * * *' },
+  // Order payments: settling → settled after the T+1 window; flag payments with no webhook
+  { id: 'payments-settle', queue: 'payments', job: 'payments.settle', pattern: '15 * * * *' },
+  { id: 'payments-reconcile', queue: 'payments', job: 'payments.reconcile', pattern: '25 * * * *' },
 ];
 
 const run = async () => {

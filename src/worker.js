@@ -4,6 +4,7 @@ import { closeRedis } from './config/redis.js';
 import { closeQueues, createWorker } from './core/queue/index.js';
 import { connectDatabase, sequelize } from './db/index.js';
 import { notificationProcessors } from './modules/notifications/notifications.jobs.js';
+import { dispatchProcessors } from './modules/orders/orders.jobs.js';
 import { paymentProcessors } from './modules/payments/payments.jobs.js';
 import { subscriptionProcessors } from './modules/subscriptions/subscriptions.jobs.js';
 
@@ -11,6 +12,7 @@ import { subscriptionProcessors } from './modules/subscriptions/subscriptions.jo
 const PROCESSORS = {
   notifications: notificationProcessors,
   payments: paymentProcessors,
+  dispatch: dispatchProcessors,
   subscriptions: subscriptionProcessors,
 };
 

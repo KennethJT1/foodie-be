@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-04 · Current phase: **15** · Next up: **Phase 15 — Checkout, payments, orders, vendor sales** (confirm CI is green on the first push)
+Last updated: 2026-11-04 · Current phase: **16** · Next up: **Phase 16 — Real time (Socket.IO)** (emit `order:status` from `transition()` in `orders.service.js` and `vendor:order:new` after order creation; confirm CI is green on the first push)
 
 ## How to use this file (read first in every new chat)
 
@@ -37,7 +37,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 12 | Plans, subscriptions, Paystack webhook | 14 | 14/14 | ✅ |
 | 13 | Catalogue, vendor menu, store, staff | 16 | 16/16 | ✅ |
 | 14 | Social, feed and moderation | 16 | 16/16 | ✅ |
-| 15 | Checkout, payments, orders, vendor sales | 18 | 0/18 | ⬜ |
+| 15 | Checkout, payments, orders, vendor sales | 18 | 18/18 | ✅ |
 | 16 | Real time (Socket.IO) | — | — | ⬜ |
 | 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 0/11 | ⬜ |
 | 18 | Reviews, rider trips, earnings, payouts | 9 | 0/9 | ⬜ |
@@ -45,7 +45,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **104/162** | |
+| | **Total** | **162** | **122/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -77,7 +77,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Uploads | `src/modules/uploads/*`, `src/integrations/cloudinary/{cloudinary.client,storage}.js`, `uploads` table | `POST /uploads`: multer in memory (8 MB → 413), type from the bytes (sharp / `%PDF-`), images → WebP (EXIF-rotated, metadata stripped, width cap per purpose, ≤2 MB), role per purpose (403), documents `type: private` with 1 h signed URLs; every file recorded in `uploads` (owner, purpose, public id). `storage` is replaceable in tests; `uploadUrl(upload)` re-signs private files |
 | Audit log | `src/core/audit/audit.js`, `src/modules/audit/*`, `audit_logs` table | `audit.log({ actor, action, targetType, targetId, summary, req }, { transaction })` (actor null → System); `GET /admin/audit-log` (`audit_log.view`). Phase 7 actions write `admin_user.created/updated`, `role.updated/reset` |
 | API router | `src/routes.js` | Empty; modules mount here |
-| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank), `subscriptions` (from each vendor's plan status; Mama Put Pro monthly renews in 9 days; invoices + matching subscription payments), then `catalogue` (12 categories, 287 dishes: Mama Put the first 14, others 5–10, photos up to the plan limit with credits; Mama Put's 2 staff), then `social` (likes, follows, ~1,000 comments with 35% vendor replies, 9 comment + 3 dish reports; counters padded). `reference` also seeds the 3 plans; vendors get real-photo logos and covers |
+| Seeder | `src/db/seed/index.js`, `steps/{reference,users,vendors}.js`, `data/{cities,reference,vendors,images}.js` | `npm run seed`: refuses production, wipes all tables, runs `reference` (settings, 6 service areas with centres + neighbourhoods, 4 templates, 12 banks, required documents), `users`, `vendors` (Mama Put, Chidi Grills, Tolu's Pot + 45: 6 pending, 1 rejected, 1 suspended; documents, bank accounts, opening hours), `riders` (Tunde, Kemi + 34: 18 in Lagos, 4 pending, 1 suspended, 45% of approved online; guarantor, documents, bank), `subscriptions` (from each vendor's plan status; Mama Put Pro monthly renews in 9 days; invoices + matching subscription payments), then `catalogue` (12 categories, 287 dishes: Mama Put the first 14, others 5–10, photos up to the plan limit with credits; Mama Put's 2 staff), then `social` (likes, follows, ~1,000 comments with 35% vendor replies, 9 comment + 3 dish reports; counters padded), then `orders` (360 over 90 days, Mama Put's live queue today, Ada's `picked_up` order with a Lagos rider, Tunde's 24 trips; one payment each; dish ordersCount and rider tripsCount). `reference` also seeds the 3 plans; vendors get real-photo logos and covers |
 | Settings | `src/modules/settings/*`, tables `settings` (key → JSON), `service_areas`, `notification_templates`, `required_documents` | `getSettings()` (Redis 10 min, defaults in code for missing keys), `updateSettings()` (mock bounds + wording, max fee ≥ base fee, audited), `invalidateSettings()`, `requiredDocuments(appliesTo)`. `GET`/`PATCH /admin/settings` (`settings.manage`) |
 | Banks / Paystack | `src/modules/banks/*`, `src/integrations/paystack/paystack.client.js`, table `banks` | `paystack.listBanks / resolveAccount / createSubaccount` (replaceable in tests); `GET /banks` (public) and `POST /banks/resolve` (signed in, 10/min per user): Paystack in production with the list refreshed daily into `banks`, seeded list + fake lookup elsewhere |
 | Vendor onboarding | `src/modules/vendors/{onboarding.service,vendors.presenter,vendors.routes}.js`, `src/modules/onboarding/onboarding.shared.js`, tables `vendor_documents`, `vendor_opening_hours`, `vendor_bank_accounts`, `bank_change_requests` + storefront columns on `vendors` | `/vendor/onboarding` (get, one step per PATCH, submit), `/vendor/documents` (attach / remove). Shared with riders: forward-only steps (`advanceStep`), `assertEditable` (draft / rejected), `ownUpload` (URL → the caller's own upload of that purpose), `resolveBank`, `notifyReviewers`, `decide()` for approve / reject / suspend / reinstate. Submit adds default opening hours when the store has none |
@@ -90,6 +90,9 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Vendor menu, store, staff | `src/modules/store/*`, table `vendor_staff` | `/vendor/menu` CRUD with plan limits (`planLimitsFor()`; 409 PLAN_LIMIT items, 422 photos; photos must be the vendor's own `food_photo` uploads or already on the item), `/vendor/store` (hours, pause, radius, prep, description, logo, cover), `/vendor/bank-change` (resolved, audited, reviewers told), `/vendor/staff` (plan staff limit) |
 | Seed photos | `src/db/seed/media.js`, `.seed-cache/` (git-ignored) | Downloads every seed photo once, stores it through the upload pipeline (WebP, resized, Cloudinary `seed/<kind>`), caches the URL in `.seed-cache/manifest.json`; logos are 400×400 centre crops of dish photos. `SEED_MEDIA=remote` skips it (Wikimedia URLs) |
 | Social and moderation | `src/modules/social/*`, tables `likes`, `follows`, `comments` (one level of vendor replies; `removed` / `hidden` flags), `reports` | `GET /feed` (cursor; nearby 1 km bands / popular score / newest / following, ranked in SQL), likes and follows (idempotent, counters in the same transaction), `/me/likes`, `/me/follows`, comments (500 chars; vendors reply on own dishes; edit / delete by the author), `POST /reports` (one open per person and target), `/vendor/engagement`, `/vendor/comments` (`answered` via EXISTS on vendor replies), `/admin/reports` list / resolve (settles every open report on the target; audited `comment.hidden|removed|report_dismissed`, `food_item.…`) |
+| Checkout and payments | `src/modules/checkout/*`, `payments` (type `order`) | `priceCart()` (server prices, options, fees, ETA, scheduling, 422 quote codes), `/checkout/quote`, `/payments/initialize` (Paystack split: subtotal → vendor subaccount, `transaction_charge` = delivery + processing fee; flag `no_split` without a subaccount), `/payments/verify` → `confirmOrderPayment()` (idempotent, row-locked, amount checked; also run by the webhook) creates the order, schedules `dispatch:order.autoReject`, audits `payment.received`; `/me/payments` |
+| Orders | `src/modules/orders/*`, tables `orders` (snapshots, fees, address JSON, delivery code, accept deadline, status history JSON), `order_items` | Scoped `/orders` and `/orders/{id}` (`orderScope()`; deliveryCode only for customer / admin), customer cancel (paid only, CANNOT_CANCEL), vendor accept / preparing / ready / reject (409 INVALID_STATUS), `transition()` appends history + notifies the customer, refunds (payment refunded; Paystack `/refund` after commit when live, `refund_failed` flag on error), accept deadline (delayed job + sweep on vendor reads), `/vendor/stats`, `/vendor/sales` (meta.summary), `/vendor/sales/daily` |
+| Admin customers and payments | `src/modules/payments/{adminPayments,settlement}.service.js` | `/admin/customers` (ordersCount) and status changes (audited), `/admin/payments` (split summary, flagged) and reconcile (audited); hourly `payments.settle` (settling → settled after 36 h) and `payments.reconcile` (`missing_webhook` when Paystack never confirmed) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
 | README | `README.md` | Local MySQL/Redis install, scripts, doc links |
@@ -314,30 +317,30 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `GET /admin/reports`
   - [x] `POST /admin/reports/{id}/resolve`
 
-### Phase 15 — Checkout, payments, orders, vendor sales ⬜
+### Phase 15 — Checkout, payments, orders, vendor sales ✅
 
-- [ ] Tables: orders, order_items, payments (order type)
-- [ ] Order state machine; accept-deadline delayed job; Paystack split + refunds; reconciliation flags
-- [ ] Seed: 360 orders over 90 days, today's Mama Put queue, Ada's live order
+- [x] Tables: orders, order_items, payments (order type)
+- [x] Order state machine; accept-deadline delayed job; Paystack split + refunds; reconciliation flags
+- [x] Seed: 360 orders over 90 days, today's Mama Put queue, Ada's live order
 - Endpoints:
-  - [ ] `POST /checkout/quote`
-  - [ ] `POST /payments/initialize`
-  - [ ] `POST /payments/verify`
-  - [ ] `GET /me/payments`
-  - [ ] `GET /orders`
-  - [ ] `GET /orders/{id}`
-  - [ ] `POST /orders/{id}/cancel`
-  - [ ] `POST /orders/{id}/accept`
-  - [ ] `POST /orders/{id}/reject`
-  - [ ] `POST /orders/{id}/preparing`
-  - [ ] `POST /orders/{id}/ready`
-  - [ ] `GET /vendor/stats`
-  - [ ] `GET /vendor/sales`
-  - [ ] `GET /vendor/sales/daily`
-  - [ ] `GET /admin/customers`
-  - [ ] `POST /admin/customers/{id}/status`
-  - [ ] `GET /admin/payments`
-  - [ ] `POST /admin/payments/{id}/reconcile`
+  - [x] `POST /checkout/quote`
+  - [x] `POST /payments/initialize`
+  - [x] `POST /payments/verify`
+  - [x] `GET /me/payments`
+  - [x] `GET /orders`
+  - [x] `GET /orders/{id}`
+  - [x] `POST /orders/{id}/cancel`
+  - [x] `POST /orders/{id}/accept`
+  - [x] `POST /orders/{id}/reject`
+  - [x] `POST /orders/{id}/preparing`
+  - [x] `POST /orders/{id}/ready`
+  - [x] `GET /vendor/stats`
+  - [x] `GET /vendor/sales`
+  - [x] `GET /vendor/sales/daily`
+  - [x] `GET /admin/customers`
+  - [x] `POST /admin/customers/{id}/status`
+  - [x] `GET /admin/payments`
+  - [x] `POST /admin/payments/{id}/reconcile`
 
 ### Phase 16 — Real time (Socket.IO) ⬜
 
@@ -503,6 +506,12 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-04 | Verify with an unpaid / mismatched payment → 409 `INVALID_STATUS` ("We haven't received this payment yet…"); a short payment is flagged `amount_mismatch` and never activates | Contract lists only 200 / 404 for verify |
 | 2026-11-04 | Plan payments write audit `subscription.paid` (not in the handoff's list) | "Every money event" is audited |
 | 2026-11-04 | The plans migration clears `vendors.plan_id` before adding its FK | Earlier seeds stored plan ids before `plans` existed; reseed after migrating |
+| 2026-11-05 | Order payments keep the mock's split fields: `vendorShare` = subtotal, `platformShare` = delivery fee, `fee` = processing fee (Paystack's real fee replaces it when live) | Same numbers as the mock admin screens; the processing fee is what covers Paystack |
+| 2026-11-05 | A missing Paystack subaccount doesn't block checkout: the payment is flagged `no_split` and the whole amount lands with KJT Foodie | The customer can still order; finance settles the vendor by hand |
+| 2026-11-05 | Accept deadline: delayed BullMQ job `dispatch:order.autoReject` (removed on accept / reject / cancel) plus a sweep on vendor order reads; a late accept returns 409 with the mock's "not accepted in time" message | Works even if the worker was down |
+| 2026-11-05 | Settlement is time-based (settled 36 h after payment) until Paystack settlement data is wired in; reconciliation only flags `missing_webhook` when Paystack is live | Matches the T+1 schedule the dashboard shows |
+| 2026-11-05 | Order notifications use type `order`; the status line is the frontend's customer text per status | Contract enum |
+| 2026-11-05 | Unpaid checkouts (`status: pending`) are hidden from `/me/payments` and `/admin/payments` | They are not transactions yet |
 | 2026-11-05 | Comment, like and new-comment notifications use type `social`; moderation notices to vendors use `system` | Contract notification enum (the mock sends `moderation`) |
 | 2026-11-05 | Dismissing a report audits `comment.report_dismissed` / `food_item.report_dismissed` (as the mock); the handoff lists only hidden / removed | Every admin decision is logged |
 | 2026-11-05 | Food items keep `photos`, `photo_credits`, `option_groups` and `available_days` as JSON columns, not child tables | Never filtered on; orders copy the chosen options; the frontend sends them whole |
@@ -534,6 +543,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-05 | 15 | Checkout quote, payments initialize / verify (order created on payment, idempotent, also via webhook), `/me/payments`, scoped orders, customer cancel, vendor accept / preparing / ready / reject with refunds, accept deadline job, vendor stats / sales / daily, admin customers and payments with reconcile (18 endpoints); orders and order_items; dispatch queue; settlement and reconciliation schedules; `orders` seed step; Postman "Checkout and orders" and "Admin · Customers and payments" folders; customer / payment endpoints in the permission matrix. Dev DB migrated and reseeded. |
 | 2026-11-05 | 14 | Feed, likes, follows, comments, reports, vendor engagement / comments and admin moderation (16 endpoints); likes, follows, comments, reports tables; isLiked / isFollowing on catalogue reads; `social` seed step; Postman "Social" and "Admin · Moderation" folders; moderation endpoints in the permission matrix. Dev DB migrated and reseeded. |
 | 2026-11-05 | 13 | Catalogue (5 public endpoints), vendor menu (5), store + bank change (3) and staff (3); categories, food_items, vendor_staff; seed photos copied to Cloudinary once (123 files, cached); `catalogue` seed step (287 dishes); `optionalAuth`, `distanceSql()`, Lagos opening-hours check; `paginate()` count fix; Postman "Catalogue" and "Vendor menu, store and staff" folders. Dev DB migrated and reseeded. |
 | 2026-11-04 | 12 | Plans, vendor subscriptions (trial, pay / upgrade / downgrade / cancel / resume), admin plans and subscriptions (14 endpoints); payments + payment_events; Paystack webhook with signature check, dedupe and worker job; hourly renewal sweep; `isVendorPublic()`; plans in the reference seed and a `subscriptions` seed step; Postman "Subscriptions", "Admin · Plans and subscriptions" and "Webhooks" folders; plan endpoints in the permission matrix (162 cases green). Seed fix: sample document uploads get their own `public_id` / `url` (both unique). Dev DB migrated and reseeded (48 vendors, 36 riders, 40 subscriptions, 77 invoices). |

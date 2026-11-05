@@ -13,6 +13,7 @@ import { liveness } from './modules/health/health.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import uploadRoutes from './modules/uploads/uploads.routes.js';
 import webhookRoutes from './modules/payments/webhook.routes.js';
+import orderRoutes, { checkoutRoutes, mePaymentRoutes, paymentRoutes } from './modules/orders/orders.routes.js';
 import riderRoutes from './modules/riders/riders.routes.js';
 import {
   commentRoutes,
@@ -33,6 +34,7 @@ const router = Router();
 router.get('/health', liveness);
 router.use('/auth', authRoutes);
 router.use('/me', meSocialRoutes);
+router.use('/me', mePaymentRoutes);
 router.use('/me', userRoutes);
 router.use('/addresses', addressRoutes);
 router.use('/notifications', authenticate, notificationRoutes);
@@ -48,6 +50,9 @@ router.use('/reports', reportRoutes);
 router.use('/vendors', vendorFollowRoutes);
 router.use('/vendors', publicVendorRoutes);
 router.use('/webhooks', webhookRoutes);
+router.use('/checkout', checkoutRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/orders', orderRoutes);
 router.use('/vendor', vendorRoutes);
 router.use('/rider', riderRoutes);
 router.use('/admin', adminRoutes);

@@ -35,6 +35,9 @@ export default (sequelize, DataTypes) => {
       accessCode: { type: DataTypes.STRING(64), allowNull: true },
       metadata: { type: DataTypes.JSON, allowNull: true },
       paidAt: { type: DataTypes.DATE(3), allowNull: true },
+      settledAt: { type: DataTypes.DATE(3), allowNull: true },
+      refundedAt: { type: DataTypes.DATE(3), allowNull: true },
+      reconcileNote: { type: DataTypes.STRING(500), allowNull: true },
     },
     { tableName: 'payments' },
   );
@@ -42,6 +45,7 @@ export default (sequelize, DataTypes) => {
   Payment.associate = (models) => {
     Payment.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
     Payment.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
+    Payment.belongsTo(models.Order, { as: 'order', foreignKey: 'orderId' });
   };
   return Payment;
 };

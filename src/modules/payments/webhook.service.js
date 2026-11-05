@@ -6,6 +6,7 @@ import { logger } from '../../config/logger.js';
 import { UnauthenticatedError } from '../../core/errors/index.js';
 import { addJob, jobId } from '../../core/queue/index.js';
 import { models } from '../../db/index.js';
+import { confirmOrderPayment } from '../checkout/checkout.service.js';
 import { confirmSubscriptionPayment } from '../subscriptions/subscriptions.service.js';
 
 const { PaymentEvent, Payment } = models;
@@ -39,8 +40,8 @@ export const receiveWebhook = async (rawBody, signature) => {
 };
 
 /**
- * Worker: handles one stored event. `charge.success` for a plan payment activates it (the same
- * idempotent path as POST /vendor/subscription/verify); order payments join in phase 15.
+ * Worker: handles one stored event. `charge.success` activates a plan payment or creates the order
+ * (the same idempotent paths as POST /vendor/subscription/verify and POST /payments/verify).
  */
 export const processWebhookEvent = async ({ eventId }) => {
   const event = await PaymentEvent.findByPk(eventId);
@@ -49,6 +50,7 @@ export const processWebhookEvent = async ({ eventId }) => {
     if (event.eventType === 'charge.success' && event.reference) {
       const payment = await Payment.findOne({ where: { reference: event.reference } });
       if (payment?.type === 'subscription') await confirmSubscriptionPayment(event.reference);
+      if (payment?.type === 'order') await confirmOrderPayment(event.reference);
     }
     await event.update({ processedAt: new Date(), error: null });
     return { processed: event.eventType };

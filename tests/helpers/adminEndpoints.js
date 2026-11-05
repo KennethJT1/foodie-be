@@ -48,3 +48,11 @@ ADMIN_ENDPOINTS.push(
   ['GET', '/api/v1/admin/reports', 'moderation.manage'],
   ['POST', '/api/v1/admin/reports/rep_nobody/resolve', 'moderation.manage'],
 );
+
+// Phase 15: customers and payments
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/customers', 'customers.view'],
+  ['POST', '/api/v1/admin/customers/usr_nobody/status', 'customers.ban'],
+  ['GET', '/api/v1/admin/payments', 'payments.view'],
+  ['POST', '/api/v1/admin/payments/pay_nobody/reconcile', 'payments.view'],
+);

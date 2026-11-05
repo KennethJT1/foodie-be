@@ -4,6 +4,8 @@ import { authenticate, requirePermission, requireRole, validate } from '../../co
 import * as controller from './admin.controller.js';
 import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
+import * as orders from '../orders/orders.controller.js';
+import { customerStatusBody, reconcileBody } from '../orders/orders.schemas.js';
 import * as riders from '../riders/riders.controller.js';
 import * as social from '../social/social.controller.js';
 import { resolveBody } from '../social/social.schemas.js';
@@ -103,6 +105,22 @@ router.post(
   moderation,
   validate({ params: idParams, body: resolveBody }),
   asyncHandler(social.resolveReport),
+);
+
+router.get('/customers', requirePermission('customers.view'), asyncHandler(orders.listCustomers));
+router.post(
+  '/customers/:id/status',
+  requirePermission('customers.ban'),
+  validate({ params: idParams, body: customerStatusBody }),
+  asyncHandler(orders.setCustomerStatus),
+);
+const paymentsView = requirePermission('payments.view');
+router.get('/payments', paymentsView, asyncHandler(orders.listPayments));
+router.post(
+  '/payments/:id/reconcile',
+  paymentsView,
+  validate({ params: idParams, body: reconcileBody }),
+  asyncHandler(orders.reconcilePayment),
 );
 
 export default router;

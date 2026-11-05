@@ -102,6 +102,12 @@ export const paystack = {
     return toTransaction(data);
   },
 
+  /** Full refund of a transaction (rejected / cancelled orders). */
+  async refund({ reference }) {
+    const { data } = await call('POST', '/refund', { body: { transaction: reference } });
+    return { id: data.id, status: data.status };
+  },
+
   /** Charges a saved card (renewals). Returns the transaction; `status` may be failed. */
   async chargeAuthorization({ authorizationCode, email, amount, reference, metadata }) {
     const { data } = await call('POST', '/transaction/charge_authorization', {
