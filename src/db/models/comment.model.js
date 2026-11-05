@@ -5,9 +5,9 @@ export default (sequelize, DataTypes) => {
     'Comment',
     {
       id: idColumn(),
-      foodItemId: { type: DataTypes.STRING(64), allowNull: false },
-      userId: { type: DataTypes.STRING(64), allowNull: false },
-      parentId: { type: DataTypes.STRING(64), allowNull: true },
+      foodItemId: { type: DataTypes.UUID, allowNull: false },
+      userId: { type: DataTypes.UUID, allowNull: false },
+      parentId: { type: DataTypes.UUID, allowNull: true },
       isVendorReply: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       body: { type: DataTypes.STRING(500), allowNull: false },
       editedAt: { type: DataTypes.DATE(3), allowNull: true },

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
+import { categoryId } from '../../../src/db/seed/ids.js';
 import request from 'supertest';
 import app from '../../../src/app.js';
 import { models } from '../../../src/db/index.js';
@@ -26,12 +27,17 @@ beforeEach(async () => {
   jollof = await createFoodItem(mama, { name: 'Party jollof rice', price: 350000, likesCount: 50 });
   await createFoodItem(mama, {
     name: 'Beef suya',
-    categoryId: 'cat-grills',
+    categoryId: categoryId('grills'),
     price: 200000,
     likesCount: 10,
     isAvailable: false,
   });
-  await createFoodItem(far, { name: 'Grilled catfish', categoryId: 'cat-grills', price: 700000, likesCount: 30 });
+  await createFoodItem(far, {
+    name: 'Grilled catfish',
+    categoryId: categoryId('grills'),
+    price: 700000,
+    likesCount: 30,
+  });
 });
 
 const get = (path) => request(app).get(`/api/v1${path}`);
@@ -42,8 +48,8 @@ describe('GET /categories', () => {
     const res = await get('/categories');
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(12);
-    expect(res.body.data[0]).toMatchObject({ id: 'cat-rice', name: 'Rice dishes', itemCount: 1 });
-    expect(res.body.data.find((c) => c.id === 'cat-grills').itemCount).toBe(2);
+    expect(res.body.data[0]).toMatchObject({ id: categoryId('rice'), name: 'Rice dishes', itemCount: 1 });
+    expect(res.body.data.find((c) => c.id === categoryId('grills')).itemCount).toBe(2);
   });
 });
 
@@ -70,7 +76,9 @@ describe('GET /food-items', () => {
   it('search, category, price, rating, availability and distance filters', async () => {
     expect(names(await get('/food-items?search=mama put'))).toEqual(['Party jollof rice', 'Beef suya']);
     expect(names(await get('/food-items?search=grills'))).toEqual(['Grilled catfish', 'Beef suya']);
-    expect(names(await get('/food-items?categoryId=cat-grills&available=true'))).toEqual(['Grilled catfish']);
+    expect(names(await get(`/food-items?categoryId=${categoryId('grills')}&available=true`))).toEqual([
+      'Grilled catfish',
+    ]);
     expect(names(await get('/food-items?minPrice=300000&maxPrice=400000'))).toEqual(['Party jollof rice']);
     expect(names(await get('/food-items?minRating=4.5'))).toEqual(['Party jollof rice', 'Beef suya']);
     // From Yaba: Mama Put is next door, the island 10 km away
@@ -105,7 +113,7 @@ describe('vendors', () => {
     expect(res.body.data.map((v) => v.name)).toEqual(['Mama Put Kitchen', 'Island Grill']);
     expect(res.body.data[0]).toMatchObject({
       itemCount: 2,
-      categoryIds: expect.arrayContaining(['cat-rice', 'cat-grills']),
+      categoryIds: expect.arrayContaining([categoryId('rice'), categoryId('grills')]),
     });
     expect(res.body.data[0].openingHours).toHaveLength(7);
     expect((await get('/vendors?search=yaba')).body.meta.total).toBe(2);

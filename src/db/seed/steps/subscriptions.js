@@ -2,6 +2,7 @@
 // in 9 days, Chidi Grills expired, the rest as the vendors step picked (60% active, 20% trial, 10%
 // grace, 10% expired). Monthly ⅔, yearly ⅓; 1–6 past monthly invoices (1 for yearly), the latest
 // failed for grace vendors; each invoice has a matching subscription payment.
+import { seedId } from '../ids.js';
 import { Op } from 'sequelize';
 import { DEFAULT_SETTINGS } from '../../../modules/settings/settings.defaults.js';
 import { models, newId } from '../../index.js';
@@ -35,13 +36,13 @@ export const subscriptions = async ({ transaction, faker, now }) => {
     else if (status === 'trial') periodEnd = now + faker.number.int({ min: 1, max: 13 }) * DAY;
     else periodEnd = now + faker.number.int({ min: 3, max: interval === 'yearly' ? 300 : 28 }) * DAY;
     if (status === 'trial') interval = 'monthly';
-    if (v.id === 'ven_mama_put') {
+    if (v.id === seedId('ven_mama_put')) {
       interval = 'monthly';
       periodEnd = now + 9 * DAY;
     }
     const periodStart = periodEnd - (interval === 'yearly' ? 365 : status === 'trial' ? 14 : 30) * DAY;
     const sub = {
-      id: `sub_${v.id.replace(/^ven_/, '')}`,
+      id: seedId(`sub_${v.id}`),
       vendorId: v.id,
       planId: v.planId,
       interval,

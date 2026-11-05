@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
     'VendorOpeningHour',
     {
       id: idColumn(),
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
       // 0 = Sunday
       day: { type: DataTypes.TINYINT, allowNull: false },
       opensAt: { type: DataTypes.CHAR(5), allowNull: false, defaultValue: '09:00' },

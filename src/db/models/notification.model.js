@@ -7,7 +7,7 @@ export default (sequelize, DataTypes) => {
     'Notification',
     {
       id: idColumn(),
-      userId: { type: DataTypes.STRING(64), allowNull: false },
+      userId: { type: DataTypes.UUID, allowNull: false },
       type: { type: DataTypes.ENUM(...NOTIFICATION_TYPES), allowNull: false },
       title: { type: DataTypes.STRING(160), allowNull: false },
       body: { type: DataTypes.STRING(500), allowNull: false },

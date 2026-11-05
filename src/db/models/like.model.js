@@ -5,8 +5,8 @@ export default (sequelize, DataTypes) => {
     'Like',
     {
       id: idColumn(),
-      userId: { type: DataTypes.STRING(64), allowNull: false },
-      foodItemId: { type: DataTypes.STRING(64), allowNull: false },
+      userId: { type: DataTypes.UUID, allowNull: false },
+      foodItemId: { type: DataTypes.UUID, allowNull: false },
     },
     { tableName: 'likes' },
   );

@@ -100,7 +100,7 @@ module.exports = {
         user_id: foreignId(Sequelize, 'users', { allowNull: true, onDelete: 'SET NULL' }),
         vendor_id: foreignId(Sequelize, 'vendors', { allowNull: true, onDelete: 'SET NULL' }),
         // FK added with the orders table (phase 15)
-        order_id: { type: Sequelize.STRING(64), allowNull: true },
+        order_id: { type: Sequelize.CHAR(36), allowNull: true },
         amount: kobo(Sequelize),
         vendor_share: kobo(Sequelize),
         platform_share: kobo(Sequelize),

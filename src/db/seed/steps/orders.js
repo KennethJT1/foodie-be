@@ -3,6 +3,7 @@
 // way with a rider, and 24 delivered trips for Tunde. Payments: card 60% / transfer 30% / USSD 10%,
 // settled after 1.5 days, about 1.5% flagged, refunded when the order was cancelled or rejected.
 // Deliveries, reviews and refunds come with their phases.
+import { seedId } from '../ids.js';
 import { Op } from 'sequelize';
 import { haversineM } from '../../../core/utils/index.js';
 import { deliveryFeeFor, etaFor, processingFeeFor } from '../../../modules/checkout/pricing.service.js';
@@ -38,13 +39,13 @@ export const orders = async ({ transaction, faker, now }) => {
     menu.get(f.vendorId).push(f);
   }
   const customers = await User.findAll({ where: { role: 'customer' }, order: [['id', 'ASC']], transaction });
-  const ada = customers.find((c) => c.id === 'usr_customer_ada');
+  const ada = customers.find((c) => c.id === seedId('usr_customer_ada'));
   const addressOf = new Map(
     (await Address.findAll({ where: { isDefault: true }, transaction })).map((a) => [a.userId, a]),
   );
   const riders = await Rider.findAll({ where: { approvalStatus: 'approved' }, order: [['id', 'ASC']], transaction });
-  const ridersIn = (city) => riders.filter((r) => r.city === city && r.id !== 'rid_tunde');
-  const mamaPut = vendors.find((v) => v.id === 'ven_mama_put');
+  const ridersIn = (city) => riders.filter((r) => r.city === city && r.id !== seedId('rid_tunde'));
+  const mamaPut = vendors.find((v) => v.id === seedId('ven_mama_put'));
   const usedCodes = new Set();
   const ordersCount = new Map();
   const trips = new Map();
@@ -236,7 +237,7 @@ export const orders = async ({ transaction, faker, now }) => {
       vendor: faker.helpers.arrayElement(lagosVendors),
       status: 'delivered',
       createdAt: faker.date.between({ from: now - 75 * DAY, to: now - 4 * 60 * MINUTE }),
-      riderId: 'rid_tunde',
+      riderId: seedId('rid_tunde'),
     });
   }
 

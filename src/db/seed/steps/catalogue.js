@@ -1,6 +1,7 @@
 // Categories, dishes and staff (handoff 8.3 / 8.4): Mama Put sells the first 14 dishes, every
 // other approved vendor 5–10 random ones. Photos are the dish's real photos in order, up to the
 // plan's photo limit, starting at a different photo per vendor; each keeps its credit.
+import { seedId } from '../ids.js';
 import { slugify } from '../../../core/utils/index.js';
 import { models, newId } from '../../index.js';
 import { CATEGORIES, DISHES, GROUPS_BY_CATEGORY, OPTION_GROUPS, PORTIONS } from '../data/catalogue.js';
@@ -56,7 +57,7 @@ export const catalogue = async ({ transaction, faker, now }) => {
   const items = [];
   vendors.forEach((v, index) => {
     const dishes =
-      v.id === 'ven_mama_put'
+      v.id === seedId('ven_mama_put')
         ? DISHES.slice(0, 14)
         : faker.helpers.arrayElements(DISHES, faker.number.int({ min: 5, max: 10 }));
     const limit = photoLimit.get(v.planId) ?? 1;
@@ -89,7 +90,7 @@ export const catalogue = async ({ transaction, faker, now }) => {
       const first = faker.person.firstName();
       const last = faker.person.lastName();
       return {
-        vendorId: 'ven_mama_put',
+        vendorId: seedId('ven_mama_put'),
         name: `${first} ${last}`,
         email: `${slugify(`${first}.${last}`).replace(/-/g, '.')}@staff.kjtfoodie.test`,
         phone: `+234805${faker.string.numeric(7)}`,

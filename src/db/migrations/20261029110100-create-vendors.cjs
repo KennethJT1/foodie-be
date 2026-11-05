@@ -29,7 +29,7 @@ module.exports = {
           defaultValue: 'none',
         },
         // FK to plans arrives with the plans table (phase 12)
-        plan_id: { type: Sequelize.STRING(64), allowNull: true },
+        plan_id: { type: Sequelize.CHAR(36), allowNull: true },
         trial_used: { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: false },
         ...timestamps(Sequelize),
         ...softDelete(Sequelize),

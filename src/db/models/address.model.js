@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
     'Address',
     {
       id: idColumn(),
-      userId: { type: DataTypes.STRING(64), allowNull: false },
+      userId: { type: DataTypes.UUID, allowNull: false },
       label: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'Home' },
       line1: { type: DataTypes.STRING(200), allowNull: false },
       area: { type: DataTypes.STRING(100), allowNull: false },

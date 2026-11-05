@@ -7,7 +7,7 @@ module.exports = {
       'notifications',
       {
         ...id(Sequelize),
-        user_id: { type: Sequelize.STRING(64), allowNull: false },
+        user_id: { type: Sequelize.CHAR(36), allowNull: false },
         type: {
           type: Sequelize.ENUM('order', 'refund', 'social', 'review', 'subscription', 'payout', 'system'),
           allowNull: false,

@@ -5,9 +5,9 @@ export default (sequelize, DataTypes) => {
     'RefreshToken',
     {
       id: idColumn(),
-      userId: { type: DataTypes.STRING(64), allowNull: false },
+      userId: { type: DataTypes.UUID, allowNull: false },
       tokenHash: { type: DataTypes.CHAR(64), allowNull: false, unique: true },
-      familyId: { type: DataTypes.STRING(64), allowNull: false },
+      familyId: { type: DataTypes.UUID, allowNull: false },
       expiresAt: { type: DataTypes.DATE(3), allowNull: false },
       revokedAt: { type: DataTypes.DATE(3), allowNull: true },
       revokedReason: {

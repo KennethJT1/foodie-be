@@ -1,5 +1,6 @@
 // Tunde and Kemi (handoff 8.2) and 34 more riders (handoff 8.4): 18 in Lagos, 4 pending,
 // 1 suspended, the rest approved (45% of them online); each with guarantor, documents and bank.
+import { seedId } from '../ids.js';
 import { hashPassword } from '../../../core/auth/index.js';
 import { slugify } from '../../../core/utils/index.js';
 import { models, newId } from '../../index.js';
@@ -67,8 +68,8 @@ export const riders = async ({ transaction, faker, now }) => {
   };
 
   makeRider({
-    id: 'rid_tunde',
-    user: { id: 'usr_rider_tunde', firstName: 'Tunde', lastName: 'Bakare' },
+    id: seedId('rid_tunde'),
+    user: { id: seedId('usr_rider_tunde'), firstName: 'Tunde', lastName: 'Bakare' },
     city: lagos,
     vehicleType: 'motorcycle',
     isOnline: false,
@@ -77,7 +78,7 @@ export const riders = async ({ transaction, faker, now }) => {
     rating: 4.8,
   });
   // Kemi has only signed up
-  rows.push({ id: 'rid_new', userId: 'usr_rider_new' });
+  rows.push({ id: seedId('rid_new'), userId: seedId('usr_rider_new') });
 
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   for (let i = 0; i < 34; i += 1) {
@@ -85,7 +86,7 @@ export const riders = async ({ transaction, faker, now }) => {
     const lastName = faker.person.lastName();
     const createdAt = faker.date.past({ years: 1, refDate: now });
     const user = {
-      id: `usr_rider_${String(i + 1).padStart(3, '0')}`,
+      id: seedId(`usr_rider_${String(i + 1).padStart(3, '0')}`),
       role: 'rider',
       firstName,
       lastName,
@@ -99,7 +100,7 @@ export const riders = async ({ transaction, faker, now }) => {
     };
     users.push(user);
     makeRider({
-      id: `rid_${String(i + 1).padStart(3, '0')}`,
+      id: seedId(`rid_${String(i + 1).padStart(3, '0')}`),
       user,
       city: i < 18 ? lagos : pickCity(faker),
       approvalStatus: i < 4 ? 'pending' : i === 4 ? 'suspended' : 'approved',

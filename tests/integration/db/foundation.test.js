@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
+import { SEED_IDS } from '../../../src/db/seed/ids.js';
 import path from 'node:path';
 import { ConflictError, NotFoundError } from '../../../src/core/errors/index.js';
 import { lockForUpdate, sequelize, withTransaction } from '../../../src/db/index.js';
@@ -35,7 +36,7 @@ describe('db foundation', () => {
       expect(Object.keys(columns)).toEqual(
         expect.arrayContaining(['id', 'name', 'price_kobo', 'created_at', 'updated_at', 'deleted_at']),
       );
-      expect(columns.id.type).toBe('VARCHAR(64)');
+      expect(columns.id.type).toMatch(/^CHAR\(36\)/);
     });
   });
 
@@ -45,9 +46,9 @@ describe('db foundation', () => {
       expect(widget.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     });
 
-    it('keeps fixed seed ids', async () => {
-      const widget = await Widget.create({ id: 'ven_mama_put', name: 'Mama Put Kitchen' });
-      expect((await Widget.findByPk('ven_mama_put')).name).toBe(widget.name);
+    it('keeps fixed (name-based) seed UUIDs', async () => {
+      const widget = await Widget.create({ id: SEED_IDS.mamaPut, name: 'Mama Put Kitchen' });
+      expect((await Widget.findByPk(SEED_IDS.mamaPut)).name).toBe(widget.name);
     });
 
     it('stores times in UTC and kobo as numbers', async () => {

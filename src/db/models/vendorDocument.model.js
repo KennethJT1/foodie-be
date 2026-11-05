@@ -5,10 +5,10 @@ export default (sequelize, DataTypes) => {
     'VendorDocument',
     {
       id: idColumn(),
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
       type: { type: DataTypes.STRING(40), allowNull: false },
       label: { type: DataTypes.STRING(120), allowNull: false },
-      uploadId: { type: DataTypes.STRING(64), allowNull: false },
+      uploadId: { type: DataTypes.UUID, allowNull: false },
     },
     { tableName: 'vendor_documents' },
   );

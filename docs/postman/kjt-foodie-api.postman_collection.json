@@ -516,7 +516,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"user\": {\n      \"id\": \"usr_customer_ada\",\n      \"role\": \"customer\",\n      \"permissions\": [],\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Okafor\",\n      \"name\": \"Ada Okafor\",\n      \"email\": \"customer@kjtfoodie.test\",\n      \"phone\": \"+2348030000001\",\n      \"avatar\": null,\n      \"status\": \"active\",\n      \"phoneVerified\": true,\n      \"createdAt\": \"2025-09-24T10:00:00.000Z\"\n    }\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"user\": {\n      \"id\": \"0c0a0515-0455-570e-83ce-74f917871add\",\n      \"role\": \"customer\",\n      \"permissions\": [],\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Okafor\",\n      \"name\": \"Ada Okafor\",\n      \"email\": \"customer@kjtfoodie.test\",\n      \"phone\": \"+2348030000001\",\n      \"avatar\": null,\n      \"status\": \"active\",\n      \"phoneVerified\": true,\n      \"createdAt\": \"2025-09-24T10:00:00.000Z\"\n    }\n  }\n}"
             }
           ]
         },
@@ -1115,7 +1115,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"usr_customer_ada\",\n    \"role\": \"customer\",\n    \"permissions\": [],\n    \"firstName\": \"Ada\",\n    \"lastName\": \"Okafor\",\n    \"name\": \"Ada Okafor\",\n    \"email\": \"customer@kjtfoodie.test\",\n    \"phone\": \"+2348030000001\",\n    \"avatar\": null,\n    \"status\": \"active\",\n    \"phoneVerified\": true,\n    \"createdAt\": \"2025-09-24T10:00:00.000Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"0c0a0515-0455-570e-83ce-74f917871add\",\n    \"role\": \"customer\",\n    \"permissions\": [],\n    \"firstName\": \"Ada\",\n    \"lastName\": \"Okafor\",\n    \"name\": \"Ada Okafor\",\n    \"email\": \"customer@kjtfoodie.test\",\n    \"phone\": \"+2348030000001\",\n    \"avatar\": null,\n    \"status\": \"active\",\n    \"phoneVerified\": true,\n    \"createdAt\": \"2025-09-24T10:00:00.000Z\"\n  }\n}"
             }
           ]
         },
@@ -4122,7 +4122,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"plan_pro\"\n}",
+              "raw": "{\n  \"planId\": \"d389d116-d68d-5332-b354-9b998abbd1e3\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4178,7 +4178,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"plan_premium\",\n  \"interval\": \"monthly\"\n}",
+              "raw": "{\n  \"planId\": \"aa87cd0b-96d5-5361-8a79-dde94af97ff6\",\n  \"interval\": \"monthly\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4288,7 +4288,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"plan_basic\",\n  \"interval\": \"monthly\"\n}",
+              "raw": "{\n  \"planId\": \"e2940a83-9a3a-5562-bbd1-34439452af37\",\n  \"interval\": \"monthly\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4986,7 +4986,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ofada rice and ayamase\",\n  \"description\": \"Local rice with green pepper stew\",\n  \"categoryId\": \"cat-rice\",\n  \"price\": 450000,\n  \"portion\": \"1 plate\",\n  \"prepTimeMins\": 20,\n  \"photos\": [\n    \"https://res.cloudinary.com/...\"\n  ],\n  \"availableDays\": [\n    0,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6\n  ],\n  \"optionGroups\": [\n    {\n      \"name\": \"Extra protein\",\n      \"required\": false,\n      \"max\": 2,\n      \"options\": [\n        {\n          \"name\": \"Chicken\",\n          \"price\": 100000\n        }\n      ]\n    }\n  ]\n}",
+              "raw": "{\n  \"name\": \"Ofada rice and ayamase\",\n  \"description\": \"Local rice with green pepper stew\",\n  \"categoryId\": \"2f93dd7e-c576-5687-bf36-5a7f2cdaa276\",\n  \"price\": 450000,\n  \"portion\": \"1 plate\",\n  \"prepTimeMins\": 20,\n  \"photos\": [\n    \"https://res.cloudinary.com/...\"\n  ],\n  \"availableDays\": [\n    0,\n    1,\n    2,\n    3,\n    4,\n    5,\n    6\n  ],\n  \"optionGroups\": [\n    {\n      \"name\": \"Extra protein\",\n      \"required\": false,\n      \"max\": 2,\n      \"options\": [\n        {\n          \"name\": \"Chicken\",\n          \"price\": 100000\n        }\n      ]\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5912,13 +5912,13 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/vendors/ven_mama_put/follow",
+              "raw": "{{baseUrl}}/vendors/0ecd0425-3297-5758-908c-bbd6d300acfe/follow",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "vendors",
-                "ven_mama_put",
+                "0ecd0425-3297-5758-908c-bbd6d300acfe",
                 "follow"
               ]
             },
@@ -5953,13 +5953,13 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/vendors/ven_mama_put/follow",
+              "raw": "{{baseUrl}}/vendors/0ecd0425-3297-5758-908c-bbd6d300acfe/follow",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "vendors",
-                "ven_mama_put",
+                "0ecd0425-3297-5758-908c-bbd6d300acfe",
                 "follow"
               ]
             },
@@ -6216,7 +6216,7 @@
     },
     {
       "name": "Checkout and orders",
-      "description": "Phase 15. Ada (`customerToken`) buys from Mama Put; set `foodItemId` to one of its dishes (Catalogue › Search food with vendorId=ven_mama_put) and add the ids of required options. Without Paystack keys verify succeeds locally; with test keys pay in the popup with `accessCode` first.",
+      "description": "Phase 15. Ada (`customerToken`) buys from Mama Put; set `foodItemId` to one of its dishes (Catalogue › Search food with vendorId=0ecd0425-3297-5758-908c-bbd6d300acfe) and add the ids of required options. Without Paystack keys verify succeeds locally; with test keys pay in the popup with `accessCode` first.",
       "item": [
         {
           "name": "Quote",
@@ -6262,7 +6262,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"vendorId\": \"ven_mama_put\",\n  \"addressId\": \"adr_ada_home\",\n  \"items\": [\n    {\n      \"foodItemId\": \"{{foodItemId}}\",\n      \"quantity\": 1,\n      \"optionIds\": []\n    }\n  ]\n}",
+              "raw": "{\n  \"vendorId\": \"0ecd0425-3297-5758-908c-bbd6d300acfe\",\n  \"addressId\": \"d7b1872c-0708-54ac-a321-62ad9df1d12d\",\n  \"items\": [\n    {\n      \"foodItemId\": \"{{foodItemId}}\",\n      \"quantity\": 1,\n      \"optionIds\": []\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6317,7 +6317,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"vendorId\": \"ven_mama_put\",\n  \"addressId\": \"adr_ada_home\",\n  \"items\": [\n    {\n      \"foodItemId\": \"{{foodItemId}}\",\n      \"quantity\": 1,\n      \"optionIds\": []\n    }\n  ],\n  \"deliveryNote\": \"Call at the gate\"\n}",
+              "raw": "{\n  \"vendorId\": \"0ecd0425-3297-5758-908c-bbd6d300acfe\",\n  \"addressId\": \"d7b1872c-0708-54ac-a321-62ad9df1d12d\",\n  \"items\": [\n    {\n      \"foodItemId\": \"{{foodItemId}}\",\n      \"quantity\": 1,\n      \"optionIds\": []\n    }\n  ],\n  \"deliveryNote\": \"Call at the gate\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

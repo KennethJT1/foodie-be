@@ -2,6 +2,7 @@
 // storefront, documents (sample paperwork photo), settlement account and opening hours.
 // Logos (square crops of a dish photo) and covers (real food stalls) are seed photos; dishes come
 // from the catalogue step, subscriptions from the subscriptions step.
+import { seedId } from '../ids.js';
 import { hashPassword } from '../../../core/auth/index.js';
 import { slugify } from '../../../core/utils/index.js';
 import { models, newId } from '../../index.js';
@@ -105,7 +106,12 @@ export const vendors = async ({ transaction, faker, now }) => {
       rating: Number(faker.number.float({ min: 3.6, max: 4.9 }).toFixed(1)),
       ratingCount: faker.number.int({ min: 4, max: 400 }),
       refundRate: Number(faker.number.float({ min: 0, max: 6 }).toFixed(1)),
-      planId: faker.helpers.arrayElement(['plan_basic', 'plan_pro', 'plan_pro', 'plan_premium']),
+      planId: faker.helpers.arrayElement([
+        seedId('plan_basic'),
+        seedId('plan_pro'),
+        seedId('plan_pro'),
+        seedId('plan_premium'),
+      ]),
       subscriptionStatus: faker.helpers.weightedArrayElement(SUBSCRIPTION_MIX),
       trialUsed: true,
       createdAt,
@@ -131,30 +137,35 @@ export const vendors = async ({ transaction, faker, now }) => {
   };
 
   makeVendor({
-    id: 'ven_mama_put',
-    owner: { id: 'usr_vendor_bisi', firstName: 'Bisi', lastName: 'Adeyemi' },
+    id: seedId('ven_mama_put'),
+    owner: { id: seedId('usr_vendor_bisi'), firstName: 'Bisi', lastName: 'Adeyemi' },
     name: 'Mama Put Kitchen',
     type: 'restaurant',
     city: lagos,
     area: 'Yaba',
     point: { lat: 6.5158, lng: 3.3794 },
-    planId: 'plan_pro',
+    planId: seedId('plan_pro'),
     subscriptionStatus: 'active',
     rating: 4.7,
     ratingCount: 312,
     refundRate: 1.2,
   });
   makeVendor({
-    id: 'ven_expired',
-    owner: { id: 'usr_vendor_expired', firstName: 'Chidi', lastName: 'Eze' },
+    id: seedId('ven_expired'),
+    owner: { id: seedId('usr_vendor_expired'), firstName: 'Chidi', lastName: 'Eze' },
     name: 'Chidi Grills',
     type: 'restaurant',
     city: lagos,
-    planId: 'plan_basic',
+    planId: seedId('plan_basic'),
     subscriptionStatus: 'expired',
   });
   // Tolu has only signed up: no type, address, documents, bank or plan
-  rows.push({ id: 'ven_new', ownerUserId: 'usr_vendor_new', name: 'Tolu’s Pot', onboardingStep: 'type' });
+  rows.push({
+    id: seedId('ven_new'),
+    ownerUserId: seedId('usr_vendor_new'),
+    name: 'Tolu’s Pot',
+    onboardingStep: 'type',
+  });
 
   // 45 more: 6 pending (sent in the last 4 days), 1 rejected, 1 suspended, the rest approved
   const passwordHash = await hashPassword(DEMO_PASSWORD);
@@ -167,7 +178,7 @@ export const vendors = async ({ transaction, faker, now }) => {
     emails.add(email);
     const createdAt = faker.date.past({ years: 1, refDate: now - 20 * DAY });
     const owner = {
-      id: `usr_vendor_${String(i + 1).padStart(3, '0')}`,
+      id: seedId(`usr_vendor_${String(i + 1).padStart(3, '0')}`),
       role: 'vendor',
       firstName,
       lastName,
@@ -182,7 +193,7 @@ export const vendors = async ({ transaction, faker, now }) => {
     owners.push(owner);
 
     const status = i < 6 ? 'pending' : i === 6 ? 'rejected' : i === 7 ? 'suspended' : 'approved';
-    const overrides = { id: `ven_${String(i + 1).padStart(3, '0')}`, owner, approvalStatus: status };
+    const overrides = { id: seedId(`ven_${String(i + 1).padStart(3, '0')}`), owner, approvalStatus: status };
     if (status === 'pending') {
       Object.assign(overrides, {
         subscriptionStatus: 'none',

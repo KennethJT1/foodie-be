@@ -1,4 +1,5 @@
 // Local bank list (Paystack's in production) and required documents (same as the frontend mock)
+import { seedId } from '../ids.js';
 export const BANKS = [
   { code: '044', name: 'Access Bank' },
   { code: '058', name: 'Guaranty Trust Bank' },
@@ -33,7 +34,7 @@ export const REQUIRED_DOCUMENTS = {
 /** Plans (handoff 8.3). Yearly prices come from the yearlyDiscountPct setting. */
 export const PLANS = [
   {
-    id: 'plan_basic',
+    id: seedId('plan_basic'),
     name: 'Basic',
     monthlyPrice: 500000,
     menuItemsLimit: 20,
@@ -45,7 +46,7 @@ export const PLANS = [
     sortOrder: 1,
   },
   {
-    id: 'plan_pro',
+    id: seedId('plan_pro'),
     name: 'Pro',
     monthlyPrice: 1200000,
     menuItemsLimit: 100,
@@ -57,7 +58,7 @@ export const PLANS = [
     sortOrder: 2,
   },
   {
-    id: 'plan_premium',
+    id: seedId('plan_premium'),
     name: 'Premium',
     monthlyPrice: 2500000,
     menuItemsLimit: null,

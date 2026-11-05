@@ -69,7 +69,7 @@ module.exports = {
         ...id(Sequelize),
         order_id: foreignId(Sequelize, 'orders', { onDelete: 'CASCADE' }),
         // No FK: menu items can be deleted; the line keeps its own copy
-        food_item_id: { type: Sequelize.STRING(64), allowNull: false },
+        food_item_id: { type: Sequelize.CHAR(36), allowNull: false },
         name: { type: Sequelize.STRING(80), allowNull: false },
         unit_price: kobo(Sequelize),
         quantity: { type: Sequelize.SMALLINT, allowNull: false },

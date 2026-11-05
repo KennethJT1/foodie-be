@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
+import { SEED_IDS } from '../../../src/db/seed/ids.js';
 import request from 'supertest';
 import app from '../../../src/app.js';
 import { env } from '../../../src/config/env.js';
@@ -43,11 +44,11 @@ const pay = async (planId, interval = 'monthly') => {
 
 describe('GET /plans', () => {
   it('is public: plans on sale, cheapest first, yearly price from the discount', async () => {
-    await Plan.update({ isRetired: true }, { where: { id: 'plan_premium' } });
+    await Plan.update({ isRetired: true }, { where: { id: SEED_IDS.planPremium } });
     const res = await request(app).get('/api/v1/plans');
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ trialDays: 14, yearlyDiscountPct: 15 });
-    expect(res.body.data.map((p) => p.id)).toEqual(['plan_basic', 'plan_pro']);
+    expect(res.body.data.map((p) => p.id)).toEqual([SEED_IDS.planBasic, SEED_IDS.planPro]);
     expect(res.body.data[1]).toMatchObject({
       name: 'Pro',
       monthlyPrice: 1200000,
@@ -74,7 +75,7 @@ describe('vendor subscription', () => {
 
   it('trial: once, after approval, no card (NOT_APPROVED, TRIAL_USED)', async () => {
     await vendor.update({ approvalStatus: 'pending' });
-    expect((await api('post', '/vendor/subscription/trial', { planId: 'plan_pro' })).body.error.code).toBe(
+    expect((await api('post', '/vendor/subscription/trial', { planId: SEED_IDS.planPro })).body.error.code).toBe(
       'NOT_APPROVED',
     );
     await vendor.update({ approvalStatus: 'approved' });
@@ -82,27 +83,30 @@ describe('vendor subscription', () => {
       planId: 'Pick a plan',
     });
 
-    const res = await api('post', '/vendor/subscription/trial', { planId: 'plan_pro' });
+    const res = await api('post', '/vendor/subscription/trial', { planId: SEED_IDS.planPro });
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
       status: 'trial',
       trialAvailable: false,
-      subscription: { planId: 'plan_pro', status: 'trial', interval: 'monthly', amount: 1200000 },
+      subscription: { planId: SEED_IDS.planPro, status: 'trial', interval: 'monthly', amount: 1200000 },
     });
     const { trialEndsAt, currentPeriodStart } = res.body.data.subscription;
     expect(new Date(trialEndsAt) - new Date(currentPeriodStart)).toBe(14 * DAY);
     expect((await api('get', '/me')).body.data.vendor).toMatchObject({
       subscriptionStatus: 'trial',
-      planId: 'plan_pro',
+      planId: SEED_IDS.planPro,
     });
 
-    const again = await api('post', '/vendor/subscription/trial', { planId: 'plan_basic' });
+    const again = await api('post', '/vendor/subscription/trial', { planId: SEED_IDS.planBasic });
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('TRIAL_USED');
   });
 
   it('initialize + verify activates the plan with an invoice and a payment; verify is idempotent', async () => {
-    const init = await api('post', '/vendor/subscription/initialize', { planId: 'plan_basic', interval: 'yearly' });
+    const init = await api('post', '/vendor/subscription/initialize', {
+      planId: SEED_IDS.planBasic,
+      interval: 'yearly',
+    });
     expect(init.body.data).toMatchObject({ amount: 5100000, kind: 'new', email: owner.email });
     expect(init.body.data.reference).toMatch(/^SUB_/);
 
@@ -110,7 +114,7 @@ describe('vendor subscription', () => {
     expect(verified.status).toBe(200);
     expect(verified.body.data).toMatchObject({
       status: 'active',
-      subscription: { planId: 'plan_basic', interval: 'yearly', amount: 5100000, cancelAtPeriodEnd: false },
+      subscription: { planId: SEED_IDS.planBasic, interval: 'yearly', amount: 5100000, cancelAtPeriodEnd: false },
     });
     await api('post', '/vendor/subscription/verify', { reference: init.body.data.reference }).expect(200);
     expect(await SubscriptionInvoice.count()).toBe(1);
@@ -127,7 +131,7 @@ describe('vendor subscription', () => {
     const init = await api(
       'post',
       '/vendor/subscription/initialize',
-      { planId: 'plan_pro', interval: 'monthly' },
+      { planId: SEED_IDS.planPro, interval: 'monthly' },
       bearer(other),
     );
     expect((await api('post', '/vendor/subscription/verify', { reference: init.body.data.reference })).status).toBe(
@@ -137,12 +141,15 @@ describe('vendor subscription', () => {
   });
 
   it('same plan, prorated upgrade, downgrade at renewal', async () => {
-    await pay('plan_pro');
+    await pay(SEED_IDS.planPro);
     expect(
-      (await api('post', '/vendor/subscription/initialize', { planId: 'plan_pro', interval: 'monthly' })).body.error
-        .code,
+      (await api('post', '/vendor/subscription/initialize', { planId: SEED_IDS.planPro, interval: 'monthly' })).body
+        .error.code,
     ).toBe('SAME_PLAN');
-    const down = await api('post', '/vendor/subscription/initialize', { planId: 'plan_basic', interval: 'monthly' });
+    const down = await api('post', '/vendor/subscription/initialize', {
+      planId: SEED_IDS.planBasic,
+      interval: 'monthly',
+    });
     expect(down.body.error.code).toBe('DOWNGRADE_AT_RENEWAL');
 
     // Half the period used: Premium (₦25,000) minus half of Pro (₦6,000)
@@ -151,19 +158,28 @@ describe('vendor subscription', () => {
       currentPeriodStart: new Date(Date.now() - 15 * DAY),
       currentPeriodEnd: new Date(Date.now() + 15 * DAY),
     });
-    const up = await api('post', '/vendor/subscription/initialize', { planId: 'plan_premium', interval: 'monthly' });
+    const up = await api('post', '/vendor/subscription/initialize', {
+      planId: SEED_IDS.planPremium,
+      interval: 'monthly',
+    });
     expect(up.body.data.kind).toBe('upgrade');
     expect(Math.abs(up.body.data.amount - 1900000)).toBeLessThan(100);
     const upgraded = await api('post', '/vendor/subscription/verify', { reference: up.body.data.reference });
     // Same interval: the period is kept
-    expect(upgraded.body.data.subscription.planId).toBe('plan_premium');
+    expect(upgraded.body.data.subscription.planId).toBe(SEED_IDS.planPremium);
     expect(new Date(upgraded.body.data.subscription.currentPeriodEnd).getTime()).toBe(sub.currentPeriodEnd.getTime());
 
-    const upPay = await api('post', '/vendor/subscription/change', { planId: 'plan_premium', interval: 'yearly' });
+    const upPay = await api('post', '/vendor/subscription/change', {
+      planId: SEED_IDS.planPremium,
+      interval: 'yearly',
+    });
     expect(upPay.body.error.code).toBe('PAYMENT_REQUIRED');
-    const scheduled = await api('post', '/vendor/subscription/change', { planId: 'plan_basic', interval: 'monthly' });
+    const scheduled = await api('post', '/vendor/subscription/change', {
+      planId: SEED_IDS.planBasic,
+      interval: 'monthly',
+    });
     expect(scheduled.body.data.subscription.scheduledChange).toEqual({
-      planId: 'plan_basic',
+      planId: SEED_IDS.planBasic,
       planName: 'Basic',
       interval: 'monthly',
     });
@@ -171,7 +187,7 @@ describe('vendor subscription', () => {
 
   it('cancel at period end and resume; 409 with no running plan', async () => {
     expect((await api('post', '/vendor/subscription/cancel')).body.error.code).toBe('INVALID_STATUS');
-    await pay('plan_basic');
+    await pay(SEED_IDS.planBasic);
     expect((await api('post', '/vendor/subscription/cancel')).body.data.subscription.cancelAtPeriodEnd).toBe(true);
     // A cancelled plan stays public until it ends
     expect(isVendorPublic(await vendor.reload())).toBe(true);
@@ -183,7 +199,7 @@ describe('renewal sweep', () => {
   const setPeriod = (fields) => Subscription.update(fields, { where: { vendorId: vendor.id } });
 
   it('reminds 7 and 1 days before, once each', async () => {
-    await pay('plan_pro');
+    await pay(SEED_IDS.planPro);
     await setPeriod({ currentPeriodEnd: new Date(Date.now() + 5 * DAY) });
     await scanSubscriptions();
     await scanSubscriptions();
@@ -194,7 +210,7 @@ describe('renewal sweep', () => {
   });
 
   it('an unpaid renewal starts grace, then expires and hides the store', async () => {
-    await pay('plan_pro');
+    await pay(SEED_IDS.planPro);
     await setPeriod({ currentPeriodEnd: new Date(Date.now() - 1000) });
     expect(await scanSubscriptions()).toMatchObject({ periodsEnded: 1, failed: 0 });
     await vendor.reload();
@@ -211,12 +227,12 @@ describe('renewal sweep', () => {
     expect((await api('get', '/vendor/subscription')).body.data.status).toBe('expired');
 
     // Paying again starts a new period
-    const renewed = await pay('plan_basic');
+    const renewed = await pay(SEED_IDS.planBasic);
     expect(renewed.body.data.status).toBe('active');
   });
 
   it('a trial or a cancelled plan simply ends', async () => {
-    await api('post', '/vendor/subscription/trial', { planId: 'plan_pro' });
+    await api('post', '/vendor/subscription/trial', { planId: SEED_IDS.planPro });
     await setPeriod({ currentPeriodEnd: new Date(Date.now() - 1000) });
     await scanSubscriptions();
     expect((await vendor.reload()).subscriptionStatus).toBe('expired');
@@ -230,13 +246,13 @@ describe('admin plans and subscriptions', () => {
   });
 
   it('lists every plan with live vendor counts', async () => {
-    await pay('plan_pro');
-    await Plan.update({ isRetired: true }, { where: { id: 'plan_premium' } });
+    await pay(SEED_IDS.planPro);
+    await Plan.update({ isRetired: true }, { where: { id: SEED_IDS.planPremium } });
     const res = await api('get', '/admin/plans', undefined, finance);
     expect(res.body.data.map((p) => [p.id, p.vendorCount, p.isRetired])).toEqual([
-      ['plan_basic', 0, false],
-      ['plan_pro', 1, false],
-      ['plan_premium', 0, true],
+      [SEED_IDS.planBasic, 0, false],
+      [SEED_IDS.planPro, 1, false],
+      [SEED_IDS.planPremium, 0, true],
     ]);
     expect(res.body.meta).toEqual({ trialDays: 14, yearlyDiscountPct: 15 });
   });
@@ -261,7 +277,7 @@ describe('admin plans and subscriptions', () => {
     );
     expect(created.status).toBe(201);
     expect(created.body.data).toMatchObject({ name: 'Starter', yearlyPrice: 2550000, sortOrder: 4, isPopular: true });
-    expect((await Plan.findByPk('plan_pro')).isPopular).toBe(false);
+    expect((await Plan.findByPk(SEED_IDS.planPro)).isPopular).toBe(false);
 
     const edited = await api('patch', `/admin/plans/${created.body.data.id}`, { limits: { menuItems: null } }, finance);
     expect(edited.body.data.limits).toEqual({ menuItems: null, photosPerItem: 1, staff: 1 });
@@ -270,7 +286,7 @@ describe('admin plans and subscriptions', () => {
   });
 
   it('lists subscriptions soonest first and extends one (grace becomes active)', async () => {
-    await pay('plan_pro');
+    await pay(SEED_IDS.planPro);
     const list = await api('get', '/admin/subscriptions?search=mama', undefined, finance);
     expect(list.body.data[0]).toMatchObject({ vendorName: 'Mama Put Kitchen', planName: 'Pro', status: 'active' });
     const sub = await Subscription.findOne();
@@ -314,7 +330,10 @@ describe('POST /webhooks/paystack', () => {
   };
 
   it('refuses a bad signature, stores each event once and activates the plan', async () => {
-    const init = await api('post', '/vendor/subscription/initialize', { planId: 'plan_pro', interval: 'monthly' });
+    const init = await api('post', '/vendor/subscription/initialize', {
+      planId: SEED_IDS.planPro,
+      interval: 'monthly',
+    });
     const { reference } = init.body.data;
     const payload = { event: 'charge.success', data: { id: 99, reference, amount: 1200000 } };
 

@@ -5,8 +5,8 @@ export default (sequelize, DataTypes) => {
     'OrderItem',
     {
       id: idColumn(),
-      orderId: { type: DataTypes.STRING(64), allowNull: false },
-      foodItemId: { type: DataTypes.STRING(64), allowNull: false },
+      orderId: { type: DataTypes.UUID, allowNull: false },
+      foodItemId: { type: DataTypes.UUID, allowNull: false },
       name: { type: DataTypes.STRING(80), allowNull: false },
       unitPrice: {
         type: DataTypes.BIGINT,

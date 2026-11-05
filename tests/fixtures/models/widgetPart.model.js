@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
     'WidgetPart',
     {
       id: idColumn(),
-      widgetId: { type: DataTypes.STRING(64), allowNull: false },
+      widgetId: { type: DataTypes.UUID, allowNull: false },
       label: { type: DataTypes.STRING(60), allowNull: false },
     },
     { tableName: 'test_widget_parts' },

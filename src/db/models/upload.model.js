@@ -15,7 +15,7 @@ export default (sequelize, DataTypes) => {
     'Upload',
     {
       id: idColumn(),
-      userId: { type: DataTypes.STRING(64), allowNull: false },
+      userId: { type: DataTypes.UUID, allowNull: false },
       purpose: { type: DataTypes.ENUM(...UPLOAD_PURPOSES), allowNull: false },
       publicId: { type: DataTypes.STRING(255), allowNull: false },
       resourceType: { type: DataTypes.ENUM('image', 'raw'), allowNull: false },

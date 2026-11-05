@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import request from 'supertest';
 import app from '../../../src/app.js';
 import { models } from '../../../src/db/index.js';
+import { categoryId } from '../../../src/db/seed/ids.js';
 import { CATEGORIES } from '../../../src/db/seed/data/catalogue.js';
 import { reference } from '../../../src/db/seed/steps/reference.js';
 import { resetDatabase } from '../../helpers/db.js';
@@ -137,7 +138,7 @@ describe('feed', () => {
     expect((await page('tab=following', ada)).body.data).toEqual([]);
     await api('post', `/vendors/${island.id}/follow`, ada);
     expect((await page('tab=following', ada)).body.data.map((f) => f.id)).toEqual([far.id]);
-    expect((await page('categoryId=cat-grills')).body.meta.total).toBe(0);
+    expect((await page(`categoryId=${categoryId('grills')}`)).body.meta.total).toBe(0);
     expect(near2.id).toBeDefined();
   });
 });

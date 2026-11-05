@@ -8,7 +8,7 @@ module.exports = {
       {
         ...id(Sequelize),
         // null for the system (scheduled jobs, webhooks); no FK so entries outlive their actor
-        actor_id: { type: Sequelize.STRING(64), allowNull: true },
+        actor_id: { type: Sequelize.CHAR(36), allowNull: true },
         // Copied at write time: the log shows who it was then, even after a rename or role change
         actor_name: { type: Sequelize.STRING(120), allowNull: false },
         actor_role: { type: Sequelize.STRING(32), allowNull: false },

@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) =>
     'AuditLog',
     {
       id: idColumn(),
-      actorId: { type: DataTypes.STRING(64), allowNull: true },
+      actorId: { type: DataTypes.UUID, allowNull: true },
       actorName: { type: DataTypes.STRING(120), allowNull: false },
       actorRole: { type: DataTypes.STRING(32), allowNull: false },
       action: { type: DataTypes.STRING(64), allowNull: false },

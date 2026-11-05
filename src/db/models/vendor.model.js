@@ -11,7 +11,7 @@ export default (sequelize, DataTypes) => {
     'Vendor',
     {
       id: idColumn(),
-      ownerUserId: { type: DataTypes.STRING(64), allowNull: false, unique: true },
+      ownerUserId: { type: DataTypes.UUID, allowNull: false, unique: true },
       name: { type: DataTypes.STRING(120), allowNull: false, defaultValue: '' },
       slug: { type: DataTypes.STRING(120), allowNull: true, unique: true },
       type: { type: DataTypes.ENUM(...VENDOR_TYPES), allowNull: true },
@@ -40,7 +40,7 @@ export default (sequelize, DataTypes) => {
       submittedAt: { type: DataTypes.DATE(3), allowNull: true },
       approvedAt: { type: DataTypes.DATE(3), allowNull: true },
       subscriptionStatus: { type: DataTypes.ENUM(...SUBSCRIPTION_STATUSES), allowNull: false, defaultValue: 'none' },
-      planId: { type: DataTypes.STRING(64), allowNull: true },
+      planId: { type: DataTypes.UUID, allowNull: true },
       trialUsed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       rating: { type: DataTypes.DECIMAL(3, 2), allowNull: false, defaultValue: 0, get: numberGetter('rating') },
       ratingCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },

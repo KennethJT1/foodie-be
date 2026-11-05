@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
     'BankChangeRequest',
     {
       id: idColumn(),
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
       bankCode: { type: DataTypes.STRING(20), allowNull: false },
       bankName: { type: DataTypes.STRING(120), allowNull: false },
       accountNumber: { type: DataTypes.STRING(10), allowNull: false },
@@ -15,7 +15,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'pending',
       },
-      decidedBy: { type: DataTypes.STRING(64), allowNull: true },
+      decidedBy: { type: DataTypes.UUID, allowNull: true },
       decidedAt: { type: DataTypes.DATE(3), allowNull: true },
     },
     { tableName: 'bank_change_requests' },

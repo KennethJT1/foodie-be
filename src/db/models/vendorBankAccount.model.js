@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
     'VendorBankAccount',
     {
       id: idColumn(),
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
       bankCode: { type: DataTypes.STRING(20), allowNull: false },
       bankName: { type: DataTypes.STRING(120), allowNull: false },
       accountNumber: { type: DataTypes.STRING(10), allowNull: false },

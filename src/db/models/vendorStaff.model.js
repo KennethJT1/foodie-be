@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
     'VendorStaff',
     {
       id: idColumn(),
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
       name: { type: DataTypes.STRING(120), allowNull: false },
       email: { type: DataTypes.STRING(191), allowNull: false, unique: true },
       phone: { type: DataTypes.STRING(20), allowNull: true },

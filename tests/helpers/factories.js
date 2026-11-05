@@ -1,5 +1,6 @@
 import { ensureAdminRoles, hashPassword, signAccessToken } from '../../src/core/auth/index.js';
 import { models } from '../../src/db/index.js';
+import { categoryId, SEED_IDS } from '../../src/db/seed/ids.js';
 
 const { User, Vendor, Rider } = models;
 
@@ -61,7 +62,7 @@ export const createPublicVendor = async ({ vendor, ...user } = {}) => {
     type: 'restaurant',
     approvalStatus: 'approved',
     subscriptionStatus: 'active',
-    planId: 'plan_pro',
+    planId: SEED_IDS.planPro,
     addressLine1: '1 Herbert Macaulay Way',
     area: 'Yaba',
     city: 'Lagos',
@@ -82,7 +83,7 @@ export const createFoodItem = (vendor, overrides = {}) => {
   n += 1;
   return models.FoodItem.create({
     vendorId: vendor.id,
-    categoryId: 'cat-rice',
+    categoryId: categoryId('rice'),
     name: `Dish ${n}`,
     slug: `dish-${n}`,
     description: 'Tasty',

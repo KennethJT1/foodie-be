@@ -8,19 +8,20 @@
 //     ...timestamps(Sequelize),
 //   }, TABLE_OPTIONS);
 
-const ID_LENGTH = 64; // keep in step with src/db/id.js
+// UUIDs as CHAR(36) (canonical lowercase text); keep in step with src/db/id.js
+const uuid = (Sequelize) => Sequelize.CHAR(36);
 
 // Pass to every createTable: case- and accent-insensitive search must not depend on the server default
 const TABLE_OPTIONS = { charset: 'utf8mb4', collate: 'utf8mb4_0900_ai_ci' };
 
-// String primary key: UUID v7 from the app, or a fixed seed ID
+// UUID primary key: v7 from the app, or a fixed name-based seed UUID (src/db/seed/ids.js)
 const id = (Sequelize) => ({
-  id: { type: Sequelize.STRING(ID_LENGTH), primaryKey: true, allowNull: false },
+  id: { type: uuid(Sequelize), primaryKey: true, allowNull: false },
 });
 
 // FK column; ON DELETE RESTRICT unless told otherwise (Database Schema, section 1)
 const foreignId = (Sequelize, table, { allowNull = false, onDelete = 'RESTRICT' } = {}) => ({
-  type: Sequelize.STRING(ID_LENGTH),
+  type: uuid(Sequelize),
   allowNull,
   references: { model: table, key: 'id' },
   onUpdate: 'CASCADE',
@@ -45,4 +46,4 @@ const kobo = (Sequelize, { allowNull = false, defaultValue = 0 } = {}) => ({
   ...(defaultValue !== undefined && { defaultValue }),
 });
 
-module.exports = { ID_LENGTH, TABLE_OPTIONS, id, foreignId, timestamps, softDelete, kobo };
+module.exports = { uuid, TABLE_OPTIONS, id, foreignId, timestamps, softDelete, kobo };

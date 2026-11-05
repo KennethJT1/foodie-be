@@ -10,7 +10,7 @@ export default (sequelize, DataTypes) => {
     'Rider',
     {
       id: idColumn(),
-      userId: { type: DataTypes.STRING(64), allowNull: false, unique: true },
+      userId: { type: DataTypes.UUID, allowNull: false, unique: true },
       approvalStatus: { type: DataTypes.ENUM(...APPROVAL_STATUSES), allowNull: false, defaultValue: 'draft' },
       onboardingStep: { type: DataTypes.ENUM(...RIDER_STEPS), allowNull: false, defaultValue: 'vehicle' },
       vehicleType: { type: DataTypes.ENUM(...VEHICLE_TYPES), allowNull: true },

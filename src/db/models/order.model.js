@@ -39,9 +39,9 @@ export default (sequelize, DataTypes) => {
     {
       id: idColumn(),
       code: { type: DataTypes.CHAR(6), allowNull: false, unique: true },
-      customerId: { type: DataTypes.STRING(64), allowNull: false },
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
-      riderId: { type: DataTypes.STRING(64), allowNull: true },
+      customerId: { type: DataTypes.UUID, allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
+      riderId: { type: DataTypes.UUID, allowNull: true },
       status: { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: 'paid' },
       customerName: { type: DataTypes.STRING(121), allowNull: false },
       customerPhone: { type: DataTypes.STRING(20), allowNull: true },

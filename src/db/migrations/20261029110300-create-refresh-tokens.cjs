@@ -10,7 +10,7 @@ module.exports = {
         // SHA-256 of the cookie value; the raw token is never stored
         token_hash: { type: Sequelize.CHAR(64), allowNull: false, unique: true },
         // Every rotation of one sign-in shares a family; reusing an old token revokes the family
-        family_id: { type: Sequelize.STRING(64), allowNull: false },
+        family_id: { type: Sequelize.CHAR(36), allowNull: false },
         expires_at: { type: Sequelize.DATE(3), allowNull: false },
         revoked_at: { type: Sequelize.DATE(3), allowNull: true },
         revoked_reason: {

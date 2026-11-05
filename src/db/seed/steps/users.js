@@ -1,5 +1,6 @@
 // Demo accounts (handoff 8.2), Ada's two addresses and ~70 customers (handoff 8.4). Vendor and
 // rider profiles are created by the vendors and riders steps.
+import { seedId } from '../ids.js';
 import { ensureAdminRoles, hashPassword } from '../../../core/auth/index.js';
 import { weighted } from '../../../core/utils/random.js';
 import { models } from '../../index.js';
@@ -29,17 +30,17 @@ const PREFIXES = [
 ];
 
 const DEMO_USERS = [
-  ['usr_customer_ada', 'customer', 'Ada', 'Okafor', 'customer@kjtfoodie.test', '+2348030000001'],
-  ['usr_vendor_bisi', 'vendor', 'Bisi', 'Adeyemi', 'vendor@kjtfoodie.test', '+2348030000002'],
-  ['usr_vendor_expired', 'vendor', 'Chidi', 'Eze', 'expired.vendor@kjtfoodie.test', '+2348030000003'],
-  ['usr_vendor_new', 'vendor', 'Tolu', 'Ogunleye', 'new.vendor@kjtfoodie.test', '+2348030000004'],
-  ['usr_rider_tunde', 'rider', 'Tunde', 'Bakare', 'rider@kjtfoodie.test', '+2348030000005'],
-  ['usr_rider_new', 'rider', 'Kemi', 'Adebayo', 'new.rider@kjtfoodie.test', '+2348030000006'],
-  ['usr_admin_super_admin', 'admin', 'Kenneth', 'Taiwo', 'super@kjtfoodie.test', null, 'super_admin'],
-  ['usr_admin_support', 'admin', 'Ifeoma', 'Nwosu', 'support@kjtfoodie.test', null, 'support'],
-  ['usr_admin_finance', 'admin', 'Musa', 'Abdullahi', 'finance@kjtfoodie.test', null, 'finance'],
-  ['usr_admin_dispatch', 'admin', 'Segun', 'Alabi', 'dispatch@kjtfoodie.test', null, 'dispatch'],
-  ['usr_admin_onboarding', 'admin', 'Zainab', 'Bello', 'onboarding@kjtfoodie.test', null, 'onboarding'],
+  [seedId('usr_customer_ada'), 'customer', 'Ada', 'Okafor', 'customer@kjtfoodie.test', '+2348030000001'],
+  [seedId('usr_vendor_bisi'), 'vendor', 'Bisi', 'Adeyemi', 'vendor@kjtfoodie.test', '+2348030000002'],
+  [seedId('usr_vendor_expired'), 'vendor', 'Chidi', 'Eze', 'expired.vendor@kjtfoodie.test', '+2348030000003'],
+  [seedId('usr_vendor_new'), 'vendor', 'Tolu', 'Ogunleye', 'new.vendor@kjtfoodie.test', '+2348030000004'],
+  [seedId('usr_rider_tunde'), 'rider', 'Tunde', 'Bakare', 'rider@kjtfoodie.test', '+2348030000005'],
+  [seedId('usr_rider_new'), 'rider', 'Kemi', 'Adebayo', 'new.rider@kjtfoodie.test', '+2348030000006'],
+  [seedId('usr_admin_super_admin'), 'admin', 'Kenneth', 'Taiwo', 'super@kjtfoodie.test', null, 'super_admin'],
+  [seedId('usr_admin_support'), 'admin', 'Ifeoma', 'Nwosu', 'support@kjtfoodie.test', null, 'support'],
+  [seedId('usr_admin_finance'), 'admin', 'Musa', 'Abdullahi', 'finance@kjtfoodie.test', null, 'finance'],
+  [seedId('usr_admin_dispatch'), 'admin', 'Segun', 'Alabi', 'dispatch@kjtfoodie.test', null, 'dispatch'],
+  [seedId('usr_admin_onboarding'), 'admin', 'Zainab', 'Bello', 'onboarding@kjtfoodie.test', null, 'onboarding'],
 ];
 
 /** Shared helpers for later steps: a weighted city and a point within `km` of its centre. */
@@ -91,7 +92,7 @@ export const users = async ({ transaction, faker, now }) => {
   await Address.bulkCreate(
     [
       {
-        id: 'adr_ada_home',
+        id: seedId('adr_ada_home'),
         ...makeAddress(faker, lagos, 'Home'),
         area: 'Yaba',
         lat: 6.5095,
@@ -99,14 +100,14 @@ export const users = async ({ transaction, faker, now }) => {
         isDefault: true,
       },
       {
-        id: 'adr_ada_work',
+        id: seedId('adr_ada_work'),
         ...makeAddress(faker, lagos, 'Work'),
         area: 'Victoria Island',
         lat: 6.4281,
         lng: 3.4219,
         isDefault: false,
       },
-    ].map((a) => ({ ...a, userId: 'usr_customer_ada' })),
+    ].map((a) => ({ ...a, userId: seedId('usr_customer_ada') })),
     { transaction },
   );
 
@@ -126,7 +127,7 @@ export const users = async ({ transaction, faker, now }) => {
     while (phones.has(phone));
     phones.add(phone);
 
-    const id = `usr_customer_${String(i + 1).padStart(3, '0')}`;
+    const id = seedId(`usr_customer_${String(i + 1).padStart(3, '0')}`);
     const status = i % 31 === 11 ? 'banned' : i % 23 === 7 ? 'suspended' : 'active';
     const createdAt = faker.date.past({ years: 1, refDate: now });
     customers.push({
@@ -142,7 +143,7 @@ export const users = async ({ transaction, faker, now }) => {
       phoneVerifiedAt: createdAt,
     });
     addresses.push({
-      id: `adr_customer_${String(i + 1).padStart(3, '0')}`,
+      id: seedId(`adr_customer_${String(i + 1).padStart(3, '0')}`),
       userId: id,
       isDefault: true,
       ...makeAddress(faker, pickCity(faker)),

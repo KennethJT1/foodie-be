@@ -6,9 +6,9 @@ export default (sequelize, DataTypes) => {
     'SubscriptionInvoice',
     {
       id: idColumn(),
-      vendorId: { type: DataTypes.STRING(64), allowNull: false },
-      subscriptionId: { type: DataTypes.STRING(64), allowNull: false },
-      planId: { type: DataTypes.STRING(64), allowNull: false },
+      vendorId: { type: DataTypes.UUID, allowNull: false },
+      subscriptionId: { type: DataTypes.UUID, allowNull: false },
+      planId: { type: DataTypes.UUID, allowNull: false },
       interval: { type: DataTypes.ENUM(...INTERVALS), allowNull: false },
       amount: {
         type: DataTypes.BIGINT,

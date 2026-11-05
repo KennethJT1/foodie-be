@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
+import { SEED_IDS, categoryId } from '../../../src/db/seed/ids.js';
 import request from 'supertest';
 import app from '../../../src/app.js';
 import { models } from '../../../src/db/index.js';
@@ -21,7 +22,7 @@ beforeEach(async () => {
   ({ owner, vendor } = await createPublicVendor({
     firstName: 'Bisi',
     lastName: 'Adeyemi',
-    vendor: { planId: 'plan_basic' },
+    vendor: { planId: SEED_IDS.planBasic },
   }));
   auth = bearer(owner);
 });
@@ -36,7 +37,7 @@ const photo = async () => (await createUpload(owner, 'food_photo')).url;
 const ITEM = {
   name: 'Party jollof rice',
   description: 'Smoky jollof',
-  categoryId: 'cat-rice',
+  categoryId: categoryId('rice'),
   price: 350000,
   portion: '1 plate',
   prepTimeMins: 20,
@@ -98,7 +99,7 @@ describe('vendor menu', () => {
   });
 
   it('409 PLAN_LIMIT at the plan’s item limit', async () => {
-    await models.Plan.update({ menuItemsLimit: 1 }, { where: { id: 'plan_basic' } });
+    await models.Plan.update({ menuItemsLimit: 1 }, { where: { id: SEED_IDS.planBasic } });
     await createFoodItem(vendor);
     const res = await api('post', '/menu', { ...ITEM, photos: [await photo()] });
     expect(res.status).toBe(409);
@@ -203,7 +204,7 @@ describe('staff', () => {
     expect(limit.status).toBe(409);
     expect(limit.body.error.code).toBe('PLAN_LIMIT');
 
-    await vendor.update({ planId: 'plan_pro' });
+    await vendor.update({ planId: SEED_IDS.planPro });
     expect(
       (await api('post', '/staff', { name: 'Bisi', email: owner.email, role: 'manager' })).body.error.fieldErrors,
     ).toEqual({

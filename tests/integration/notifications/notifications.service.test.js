@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
+import { SEED_IDS } from '../../../src/db/seed/ids.js';
 import { NotFoundError } from '../../../src/core/errors/index.js';
 import { getQueue } from '../../../src/core/queue/index.js';
-import { models, withTransaction } from '../../../src/db/index.js';
+import { models, newId, withTransaction } from '../../../src/db/index.js';
 import {
   createNotification,
   listNotifications,
@@ -14,8 +15,8 @@ import { resetDatabase } from '../../helpers/db.js';
 import { createUser } from '../../helpers/factories.js';
 
 const { Notification } = models;
-const ADA = 'usr_customer_ada';
-const BISI = 'usr_vendor_bisi';
+const ADA = SEED_IDS.ada;
+const BISI = SEED_IDS.bisi;
 
 const seed = () =>
   Notification.bulkCreate([
@@ -87,7 +88,7 @@ describe('notifications service', () => {
 
   it('counts unread', async () => {
     expect(await unreadCount(ADA)).toEqual({ count: 2 });
-    expect(await unreadCount('usr_nobody')).toEqual({ count: 0 });
+    expect(await unreadCount(newId())).toEqual({ count: 0 });
   });
 
   it("marks one read; someone else's is a 404", async () => {
