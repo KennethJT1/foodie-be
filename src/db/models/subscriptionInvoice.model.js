@@ -25,9 +25,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'subscription_invoices' },
   );
 
-  SubscriptionInvoice.associate = (models) => {
-    SubscriptionInvoice.belongsTo(models.Plan, { as: 'plan', foreignKey: 'planId' });
-    SubscriptionInvoice.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-  };
   return SubscriptionInvoice;
 };

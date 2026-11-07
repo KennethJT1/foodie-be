@@ -21,8 +21,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'bank_change_requests' },
   );
 
-  BankChangeRequest.associate = (models) => {
-    BankChangeRequest.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-  };
   return BankChangeRequest;
 };

@@ -13,9 +13,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'vendor_documents' },
   );
 
-  VendorDocument.associate = (models) => {
-    VendorDocument.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-    VendorDocument.belongsTo(models.Upload, { as: 'upload', foreignKey: 'uploadId' });
-  };
   return VendorDocument;
 };

@@ -32,8 +32,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'addresses' },
   );
 
-  Address.associate = (models) => {
-    Address.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
-  };
   return Address;
 };

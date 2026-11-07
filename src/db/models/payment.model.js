@@ -42,10 +42,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'payments' },
   );
 
-  Payment.associate = (models) => {
-    Payment.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-    Payment.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
-    Payment.belongsTo(models.Order, { as: 'order', foreignKey: 'orderId' });
-  };
   return Payment;
 };

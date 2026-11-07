@@ -17,11 +17,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'comments' },
   );
 
-  Comment.associate = (models) => {
-    Comment.belongsTo(models.User, { as: 'author', foreignKey: 'userId' });
-    Comment.belongsTo(models.FoodItem, { as: 'foodItem', foreignKey: 'foodItemId' });
-    Comment.belongsTo(models.Comment, { as: 'parent', foreignKey: 'parentId' });
-    Comment.hasMany(models.Comment, { as: 'replies', foreignKey: 'parentId' });
-  };
   return Comment;
 };

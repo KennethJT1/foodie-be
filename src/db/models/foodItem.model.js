@@ -36,9 +36,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'food_items', paranoid: true },
   );
 
-  FoodItem.associate = (models) => {
-    FoodItem.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-    FoodItem.belongsTo(models.Category, { as: 'category', foreignKey: 'categoryId' });
-  };
   return FoodItem;
 };

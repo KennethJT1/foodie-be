@@ -29,8 +29,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'order_items' },
   );
 
-  OrderItem.associate = (models) => {
-    OrderItem.belongsTo(models.Order, { as: 'order', foreignKey: 'orderId' });
-  };
   return OrderItem;
 };

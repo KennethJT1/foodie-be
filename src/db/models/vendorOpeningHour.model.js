@@ -15,8 +15,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'vendor_opening_hours' },
   );
 
-  VendorOpeningHour.associate = (models) => {
-    VendorOpeningHour.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-  };
   return VendorOpeningHour;
 };

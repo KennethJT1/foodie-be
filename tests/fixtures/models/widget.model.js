@@ -13,8 +13,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'test_widgets', paranoid: true },
   );
 
-  Widget.associate = (models) => {
-    Widget.hasMany(models.WidgetPart, { as: 'parts', foreignKey: 'widgetId' });
-  };
   return Widget;
 };

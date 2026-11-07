@@ -3,8 +3,13 @@ import path from 'node:path';
 import { buildListQuery, cursorPaginate, paginate } from '../../../src/core/query/index.js';
 import { sequelize } from '../../../src/db/index.js';
 import { loadModels } from '../../../src/db/models/index.js';
+import { defineAssociations as defineWidgetAssociations } from '../../fixtures/models/association.js';
 
-const { Widget, WidgetPart } = await loadModels(sequelize, path.resolve('tests/fixtures/models'));
+const { Widget, WidgetPart } = await loadModels(
+  sequelize,
+  path.resolve('tests/fixtures/models'),
+  defineWidgetAssociations,
+);
 
 const config = {
   searchFields: ['name'],

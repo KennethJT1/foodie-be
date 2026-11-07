@@ -29,8 +29,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'uploads' },
   );
 
-  Upload.associate = (models) => {
-    Upload.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
-  };
   return Upload;
 };

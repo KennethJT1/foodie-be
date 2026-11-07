@@ -36,10 +36,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'riders' },
   );
 
-  Rider.associate = (models) => {
-    Rider.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
-    Rider.hasMany(models.RiderDocument, { as: 'documents', foreignKey: 'riderId' });
-    Rider.hasOne(models.RiderBankAccount, { as: 'bankAccount', foreignKey: 'riderId' });
-  };
   return Rider;
 };

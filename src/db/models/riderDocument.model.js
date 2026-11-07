@@ -13,9 +13,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'rider_documents' },
   );
 
-  RiderDocument.associate = (models) => {
-    RiderDocument.belongsTo(models.Rider, { as: 'rider', foreignKey: 'riderId' });
-    RiderDocument.belongsTo(models.Upload, { as: 'upload', foreignKey: 'uploadId' });
-  };
   return RiderDocument;
 };

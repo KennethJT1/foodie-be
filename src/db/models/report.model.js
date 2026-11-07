@@ -17,9 +17,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'reports' },
   );
 
-  Report.associate = (models) => {
-    Report.belongsTo(models.User, { as: 'reporter', foreignKey: 'reporterId' });
-    Report.belongsTo(models.User, { as: 'resolver', foreignKey: 'resolvedBy' });
-  };
   return Report;
 };

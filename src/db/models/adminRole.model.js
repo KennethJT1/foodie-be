@@ -9,13 +9,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'admin_roles' },
   );
 
-  AdminRole.associate = (models) => {
-    AdminRole.belongsToMany(models.Permission, {
-      as: 'permissions',
-      through: models.AdminRolePermission,
-      foreignKey: 'roleId',
-      otherKey: 'permissionId',
-    });
-  };
   return AdminRole;
 };

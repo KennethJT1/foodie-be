@@ -11,8 +11,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'test_widget_parts' },
   );
 
-  WidgetPart.associate = (models) => {
-    WidgetPart.belongsTo(models.Widget, { as: 'widget', foreignKey: 'widgetId' });
-  };
   return WidgetPart;
 };

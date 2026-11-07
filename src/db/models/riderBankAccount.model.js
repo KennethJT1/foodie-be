@@ -14,8 +14,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'rider_bank_accounts' },
   );
 
-  RiderBankAccount.associate = (models) => {
-    RiderBankAccount.belongsTo(models.Rider, { as: 'rider', foreignKey: 'riderId' });
-  };
   return RiderBankAccount;
 };

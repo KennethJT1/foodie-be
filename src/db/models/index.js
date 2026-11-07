@@ -3,14 +3,16 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../sequelize.js';
+import { defineAssociations } from './association.js';
 
 const MODELS_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Loads every `*.model.js` in `dir`. Each file default-exports `(sequelize, DataTypes) => Model`
- * and may set `Model.associate = (models) => { ... }`, called once all models are defined.
+ * Loads every `*.model.js` in `dir`. Each file default-exports `(sequelize, DataTypes) => Model`.
+ * Once all models are defined, `associate(models)` wires up the relations between them
+ * (see `association.js`).
  */
-export const loadModels = async (db, dir = MODELS_DIR) => {
+export const loadModels = async (db, dir = MODELS_DIR, associate = defineAssociations) => {
   const files = (await readdir(dir)).filter((file) => file.endsWith('.model.js')).sort();
 
   const models = {};
@@ -20,7 +22,7 @@ export const loadModels = async (db, dir = MODELS_DIR) => {
     models[model.name] = model;
   }
 
-  for (const model of Object.values(models)) model.associate?.(models);
+  associate(models);
   return models;
 };
 

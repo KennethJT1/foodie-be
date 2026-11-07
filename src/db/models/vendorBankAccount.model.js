@@ -16,8 +16,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'vendor_bank_accounts' },
   );
 
-  VendorBankAccount.associate = (models) => {
-    VendorBankAccount.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-  };
   return VendorBankAccount;
 };

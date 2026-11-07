@@ -37,12 +37,5 @@ export default (sequelize, DataTypes) => {
     },
   );
 
-  User.associate = (models) => {
-    User.hasOne(models.Vendor, { as: 'vendor', foreignKey: 'ownerUserId' });
-    User.hasOne(models.Rider, { as: 'rider', foreignKey: 'userId' });
-    User.hasMany(models.Address, { as: 'addresses', foreignKey: 'userId' });
-    User.hasMany(models.RefreshToken, { as: 'refreshTokens', foreignKey: 'userId' });
-    User.hasMany(models.Notification, { as: 'notifications', foreignKey: 'userId' });
-  };
   return User;
 };

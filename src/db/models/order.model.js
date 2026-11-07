@@ -68,12 +68,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'orders' },
   );
 
-  Order.associate = (models) => {
-    Order.belongsTo(models.User, { as: 'customer', foreignKey: 'customerId' });
-    Order.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-    Order.belongsTo(models.Rider, { as: 'rider', foreignKey: 'riderId' });
-    Order.hasMany(models.OrderItem, { as: 'items', foreignKey: 'orderId' });
-    Order.hasOne(models.Payment, { as: 'payment', foreignKey: 'orderId' });
-  };
   return Order;
 };

@@ -11,9 +11,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'follows' },
   );
 
-  Follow.associate = (models) => {
-    Follow.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
-    Follow.belongsTo(models.Vendor, { as: 'vendor', foreignKey: 'vendorId' });
-  };
   return Follow;
 };

@@ -11,9 +11,5 @@ export default (sequelize, DataTypes) => {
     { tableName: 'likes' },
   );
 
-  Like.associate = (models) => {
-    Like.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
-    Like.belongsTo(models.FoodItem, { as: 'foodItem', foreignKey: 'foodItemId' });
-  };
   return Like;
 };

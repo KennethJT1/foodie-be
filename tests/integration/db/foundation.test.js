@@ -4,9 +4,14 @@ import path from 'node:path';
 import { ConflictError, NotFoundError } from '../../../src/core/errors/index.js';
 import { lockForUpdate, sequelize, withTransaction } from '../../../src/db/index.js';
 import { loadModels } from '../../../src/db/models/index.js';
+import { defineAssociations as defineWidgetAssociations } from '../../fixtures/models/association.js';
 import { resetDatabase } from '../../helpers/db.js';
 
-const { Widget, WidgetPart } = await loadModels(sequelize, path.resolve('tests/fixtures/models'));
+const { Widget, WidgetPart } = await loadModels(
+  sequelize,
+  path.resolve('tests/fixtures/models'),
+  defineWidgetAssociations,
+);
 
 beforeAll(async () => {
   // Test-only tables; real tables come from migrations
@@ -26,7 +31,7 @@ describe('db foundation', () => {
   });
 
   describe('model loader', () => {
-    it('defines every *.model.js and runs associate()', () => {
+    it('defines every *.model.js and applies the associations', () => {
       expect(Widget.associations.parts.target).toBe(WidgetPart);
       expect(WidgetPart.associations.widget.target).toBe(Widget);
     });
