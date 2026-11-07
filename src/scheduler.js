@@ -12,6 +12,8 @@ export const SCHEDULES = [
   // Order payments: settling → settled after the T+1 window; flag payments with no webhook
   { id: 'payments-settle', queue: 'payments', job: 'payments.settle', pattern: '15 * * * *' },
   { id: 'payments-reconcile', queue: 'payments', job: 'payments.reconcile', pattern: '25 * * * *' },
+  // Rider payout statements for last month: 02:00 on the 1st
+  { id: 'payouts-statements', queue: 'payouts', job: 'payouts.statements', pattern: '0 2 1 * *' },
 ];
 
 const run = async () => {

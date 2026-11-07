@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-07 · Current phase: **18** · Next up: **Phase 18 — Reviews, rider trips, earnings, payouts** (reviews and rider_payout_statements tables; `/rider/trips` and `/rider/earnings` read `deliveries`)
+Last updated: 2026-11-07 · Current phase: **19** · Next up: **Phase 19 — Refunds** (refunds table with timeline and comments; deadline job with `refundMissedAction`; `refund` on the order detail)
 
 ## How to use this file (read first in every new chat)
 
@@ -40,12 +40,12 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 15 | Checkout, payments, orders, vendor sales | 18 | 18/18 | ✅ |
 | 16 | Real time (Socket.IO) | — | — | ✅ |
 | 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 11/11 | ✅ |
-| 18 | Reviews, rider trips, earnings, payouts | 9 | 0/9 | ⬜ |
+| 18 | Reviews, rider trips, earnings, payouts | 9 | 9/9 | ✅ |
 | 19 | Refunds | 9 | 0/9 | ⬜ |
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **133/162** | |
+| | **Total** | **162** | **142/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -94,6 +94,8 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Checkout and payments | `src/modules/checkout/*`, `payments` (type `order`) | `priceCart()` (server prices, options, fees, ETA, scheduling, 422 quote codes), `/checkout/quote`, `/payments/initialize` (Paystack split: subtotal → vendor subaccount, `transaction_charge` = delivery + processing fee; flag `no_split` without a subaccount), `/payments/verify` → `confirmOrderPayment()` (idempotent, row-locked, amount checked; also run by the webhook) creates the order, schedules `dispatch:order.autoReject`, audits `payment.received`; `/me/payments` |
 | Orders | `src/modules/orders/*`, tables `orders` (snapshots, fees, address JSON, delivery code, accept deadline, status history JSON), `order_items` | Scoped `/orders` and `/orders/{id}` (`orderScope()`; deliveryCode only for customer / admin), customer cancel (paid only, CANNOT_CANCEL), vendor accept / preparing / ready / reject (409 INVALID_STATUS), `transition()` appends history + notifies the customer, refunds (payment refunded; Paystack `/refund` after commit when live, `refund_failed` flag on error), accept deadline (delayed job + sweep on vendor reads), `/vendor/stats`, `/vendor/sales` (meta.summary), `/vendor/sales/daily` |
 | Dispatch and deliveries | `src/modules/deliveries/*`, tables `deliveries` (fee, `payout_pct` snapshot, `rider_earning`, pickup / dropoff JSON, route JSON), `delivery_offers`, `chat_messages`; `orders.dispatch_alerted_at` | `dispatchOrder()` offers a ready order to the nearest online, approved, free (not on a delivery, no live offer), active rider in the vendor's city who hasn't had it; rows locked so an order or rider is never doubled. Offers last `riderOfferTimeoutSec` (job `dispatch:offer.expire`; reads expire late ones too); decline / expiry / going offline → next rider; nobody → Dispatch admins (`orders.reassign`) notified once and `dispatch:order.dispatch` retried each minute. `findJobFor()` offers a freed rider (online, delivered, declined) the nearest waiting order. `/rider/status`, `/rider/offers`, accept (409 OFFER_GONE) / decline, `/rider/delivery`, pickup, complete (code → 422; earning = payoutPct% of fee; tripsCount +1). Socket: `rider:subscribe`, `rider:location` (own socket, online only; stores, appends to the route, refreshes the order ETA, forwards to `order:{id}`), `rider:job:offer`, `chat:message`, `admin:live-map:subscribe` (snapshot now, then every 5 s per instance via `io.local`). `/admin/orders/{id}/reassign` (audited), `/admin/live-map`, `/admin/riders?nearOrderId`, `isBusy` and `recentTrips` on admin riders; `delivery` on the order detail and `order:status` |
+| Reviews | `src/modules/reviews/*`, table `reviews` (unique order + target) | `POST /orders/{id}/reviews` (customer, delivered only, once per target → 409 ALREADY_SUBMITTED; running average on the vendor / rider; `ratedVendor` / `ratedRider`; vendor notified), `GET /reviews` (public; targetType, targetId, rating; search comment, name), `POST /reviews/{id}/reply` (store owner, once) |
+| Rider money and payouts | `src/modules/payouts/*`, table `rider_payout_statements` (unique rider + month) | `/rider/trips` (delivered deliveries; search code, vendor, drop-off area), `/rider/earnings` (Lagos month + today), `/rider/statements`; `/admin/payouts` list / approve / mark-paid (audited, rider notified). Job `payouts:payouts.statements` (scheduler 02:00 on the 1st) makes last month's drafts from delivered trips (amount = earnings fixed on each delivery); re-runs add nothing |
 | Admin customers and payments | `src/modules/payments/{adminPayments,settlement}.service.js` | `/admin/customers` (ordersCount) and status changes (audited), `/admin/payments` (split summary, flagged) and reconcile (audited); hourly `payments.settle` (settling → settled after 36 h) and `payments.reconcile` (`missing_webhook` when Paystack never confirmed) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
@@ -371,20 +373,20 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `GET /orders/{id}/chat`
   - [x] `POST /orders/{id}/chat`
 
-### Phase 18 — Reviews, rider trips, earnings, payouts ⬜
+### Phase 18 — Reviews, rider trips, earnings, payouts ✅
 
-- [ ] Tables: reviews, rider_payout_statements; monthly statement job
-- [ ] Seed: reviews, 3 months of statements
+- [x] Tables: reviews, rider_payout_statements; monthly statement job
+- [x] Seed: reviews, 3 months of statements
 - Endpoints:
-  - [ ] `POST /orders/{id}/reviews`
-  - [ ] `GET /reviews`
-  - [ ] `POST /reviews/{id}/reply`
-  - [ ] `GET /rider/trips`
-  - [ ] `GET /rider/earnings`
-  - [ ] `GET /rider/statements`
-  - [ ] `GET /admin/payouts`
-  - [ ] `POST /admin/payouts/{id}/approve`
-  - [ ] `POST /admin/payouts/{id}/mark-paid`
+  - [x] `POST /orders/{id}/reviews`
+  - [x] `GET /reviews`
+  - [x] `POST /reviews/{id}/reply`
+  - [x] `GET /rider/trips`
+  - [x] `GET /rider/earnings`
+  - [x] `GET /rider/statements`
+  - [x] `GET /admin/payouts`
+  - [x] `POST /admin/payouts/{id}/approve`
+  - [x] `POST /admin/payouts/{id}/mark-paid`
 
 ### Phase 19 — Refunds ⬜
 
@@ -536,6 +538,9 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-07 | `rider:location` is acknowledged (`{ ok }` / `{ ok: false, error }`) like the subscribe events; positions sent with another rider's id or while offline are refused | The handoff says only "accepted while online" |
 | 2026-11-07 | Route points are capped at the last 2000 per delivery | Keeps the JSON column bounded (about 4.5 h at one point every 8 s) |
 | 2026-11-07 | Pickup / complete in the wrong state → 409 `INVALID_STATUS` (the contract gives no code) | The handoff's generic status code |
+| 2026-11-07 | Reviews already given → 409 `ALREADY_SUBMITTED`; reviewing before delivery → 409 `INVALID_STATUS`; a bad `targetType` → 422 (the mock sends 400) | Contract lists 409 without codes; validation errors are 422 everywhere else |
+| 2026-11-07 | A statement's `amount` is the sum of the earnings fixed on each delivery (each delivery keeps the payout % of its day); `payoutPct` on the statement is the setting when it was made | Changing the payout % mid-month must not re-price finished trips |
+| 2026-11-07 | Statements are made only for riders who delivered that month (the mock seeds every approved rider) | No zero-amount statements to approve |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -550,6 +555,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 | 2026-10-29 | `POST /auth/logout` | Contract inherits `bearerAuth`; backend accepts it without a token (cookie only). Suggest `security: []` in the contract |
 | 2026-10-29 | `GET /me` | Backend also returns `phoneVerified` and `createdAt` (not in the `User` schema); please add them or say if unwanted |
 | 2026-10-29 | `POST /uploads` | `width` / `height` are `integer` in the contract; for a PDF document the backend returns `null`. Please mark them nullable |
+| 2026-11-07 | `Review.reply` | The contract types `reply` as string or null; the mock stores `{ body, createdAt }`. Backend follows the contract and adds `repliedAt`. Confirm the UI reads `reply` as a string |
 | 2026-11-04 | `Notification.type` | The mock creates `vendor`, `rider`, `vendor_submitted`, `rider_submitted`, `support`, `delivery`, `moderation`, `chat`, which the contract enum doesn't list. Backend uses `system` for onboarding ones for now. Extend the enum, or confirm the UI only needs the listed values |
 | 2026-10-29 | `POST /auth/login` 401 | The mock sends `INVALID_CREDENTIALS`, which the handoff error table does not list. Backend sends it; please add it to the handoff table |
 
@@ -557,6 +563,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-07 | 18 | Reviews (rate vendor / rider, public list, vendor reply), rider trips / earnings / statements, admin payouts approve / mark-paid (9 endpoints); reviews and rider_payout_statements tables; monthly statement job and schedule (`payouts` queue); `reviews` and `payouts` seed steps; Postman "Reviews", "Rider trips and earnings" and "Admin · Payouts" folders; payout endpoints in the permission matrix. |
 | 2026-11-07 | 17 | Dispatch and deliveries (11 endpoints): rider status, offers with 30 s expiry and next-rider hand-off, accept / decline, active delivery, pickup, complete with the code; customer–rider chat; admin reassign and live map; `nearOrderId`, `isBusy`, `recentTrips` on admin riders. Tables deliveries, delivery_offers, chat_messages. Socket `rider:subscribe`, `rider:location`, `rider:job:offer`, `chat:message`, `admin:live-map`. `deliveries` seed step (a delivery per ridden order, routes, live riders online). Postman "Dispatch, deliveries and chat" and "Admin · Dispatch" folders; dispatch endpoints in the permission matrix. |
 | 2026-11-07 | 16 | Socket.IO on the API server with the Redis adapter, JWT check on connect, `user:` / `order:` / `vendor:` rooms with join checks; `order:status` from every committed transition, `vendor:order:new` on a paid order, `notification:new` on every new in-app row; worker / scheduler emit through `@socket.io/redis-emitter`; realtime integration tests. Also: model associations moved into `src/db/models/association.js`. |
 | 2026-11-05 | 15 (follow-up) | IDs switched to UUIDs: `CHAR(36)` keys in every migration and model, seed fixed IDs via `seedId()` / `SEED_IDS`, tests and Postman examples updated; dev and test DBs rebuilt and dev reseeded. |

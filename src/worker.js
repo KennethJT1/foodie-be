@@ -6,6 +6,7 @@ import { connectDatabase, sequelize } from './db/index.js';
 import { notificationProcessors } from './modules/notifications/notifications.jobs.js';
 import { dispatchProcessors } from './modules/orders/orders.jobs.js';
 import { paymentProcessors } from './modules/payments/payments.jobs.js';
+import { payoutProcessors } from './modules/payouts/payouts.jobs.js';
 import { subscriptionProcessors } from './modules/subscriptions/subscriptions.jobs.js';
 
 // Queue name → processors by job name. Each phase registers its queue here.
@@ -14,6 +15,7 @@ const PROCESSORS = {
   payments: paymentProcessors,
   dispatch: dispatchProcessors,
   subscriptions: subscriptionProcessors,
+  payouts: payoutProcessors,
 };
 
 const SHUTDOWN_TIMEOUT_MS = 30_000;

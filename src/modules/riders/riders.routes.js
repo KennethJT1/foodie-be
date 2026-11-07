@@ -4,6 +4,7 @@ import { authenticate, requireRole, validate } from '../../core/middlewares/inde
 import { documentBody, idParams, onboardingStepBody } from '../vendors/vendors.schemas.js';
 import * as controller from './riders.controller.js';
 import { riderDispatchRoutes } from '../deliveries/deliveries.routes.js';
+import { riderMoneyRoutes } from '../payouts/payouts.routes.js';
 
 // Mounted at /rider: the signed-in rider's own application and work
 const router = Router();
@@ -17,5 +18,6 @@ router.post('/documents', validate({ body: documentBody }), asyncHandler(control
 router.delete('/documents/:id', validate({ params: idParams }), asyncHandler(controller.removeDocument));
 router.get('/me', asyncHandler(controller.getProfile));
 router.use(riderDispatchRoutes);
+router.use(riderMoneyRoutes);
 
 export default router;

@@ -17,6 +17,11 @@ export const QUEUES = {
     concurrency: 5,
     jobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 60_000 } },
   },
+  // Monthly rider payout statements
+  payouts: {
+    concurrency: 1,
+    jobOptions: { attempts: 5, backoff: { type: 'exponential', delay: 60_000 } },
+  },
 };
 
 // Kept around for Bull Board and debugging, then trimmed

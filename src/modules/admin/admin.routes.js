@@ -7,6 +7,8 @@ import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './ad
 import * as dispatch from '../deliveries/deliveries.controller.js';
 import { reassignBody } from '../deliveries/deliveries.schemas.js';
 import * as orders from '../orders/orders.controller.js';
+import * as payouts from '../payouts/payouts.controller.js';
+import { markPaidBody } from '../payouts/payouts.schemas.js';
 import { customerStatusBody, reconcileBody } from '../orders/orders.schemas.js';
 import * as riders from '../riders/riders.controller.js';
 import * as social from '../social/social.controller.js';
@@ -117,6 +119,17 @@ router.post(
   asyncHandler(dispatch.reassign),
 );
 router.get('/live-map', requirePermission('live_map.view'), asyncHandler(dispatch.liveMap));
+
+// Rider payout statements
+const payoutsManage = requirePermission('payouts.manage');
+router.get('/payouts', payoutsManage, asyncHandler(payouts.listPayouts));
+router.post('/payouts/:id/approve', payoutsManage, validate({ params: idParams }), asyncHandler(payouts.approvePayout));
+router.post(
+  '/payouts/:id/mark-paid',
+  payoutsManage,
+  validate({ params: idParams, body: markPaidBody }),
+  asyncHandler(payouts.markPayoutPaid),
+);
 
 router.get('/customers', requirePermission('customers.view'), asyncHandler(orders.listCustomers));
 router.post(

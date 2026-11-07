@@ -62,3 +62,10 @@ ADMIN_ENDPOINTS.push(
   ['POST', '/api/v1/admin/orders/ord_nobody/reassign', 'orders.reassign'],
   ['GET', '/api/v1/admin/live-map', 'live_map.view'],
 );
+
+// Phase 18: rider payouts
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/payouts', 'payouts.manage'],
+  ['POST', '/api/v1/admin/payouts/pst_nobody/approve', 'payouts.manage'],
+  ['POST', '/api/v1/admin/payouts/pst_nobody/mark-paid', 'payouts.manage'],
+);

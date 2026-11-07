@@ -24,9 +24,11 @@ export const defineAssociations = (models) => {
     Plan,
     RefreshToken,
     Report,
+    Review,
     Rider,
     RiderBankAccount,
     RiderDocument,
+    RiderPayoutStatement,
     Subscription,
     SubscriptionInvoice,
     Upload,
@@ -138,4 +140,12 @@ export const defineAssociations = (models) => {
   DeliveryOffer.belongsTo(Rider, { as: 'rider', foreignKey: 'riderId' });
   ChatMessage.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
   ChatMessage.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
+
+  // Reviews and rider payouts
+  Order.hasMany(Review, { as: 'reviews', foreignKey: 'orderId' });
+  Review.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+  Review.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+  Rider.hasMany(RiderPayoutStatement, { as: 'payoutStatements', foreignKey: 'riderId' });
+  RiderPayoutStatement.belongsTo(Rider, { as: 'rider', foreignKey: 'riderId' });
+  RiderPayoutStatement.belongsTo(User, { as: 'approver', foreignKey: 'approvedBy' });
 };

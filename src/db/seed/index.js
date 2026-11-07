@@ -10,6 +10,8 @@ import { prepareMedia } from './media.js';
 import { catalogue } from './steps/catalogue.js';
 import { deliveries } from './steps/deliveries.js';
 import { orders } from './steps/orders.js';
+import { payouts } from './steps/payouts.js';
+import { reviews } from './steps/reviews.js';
 import { social } from './steps/social.js';
 import { reference } from './steps/reference.js';
 import { riders } from './steps/riders.js';
@@ -19,7 +21,19 @@ import { vendors } from './steps/vendors.js';
 
 // Run in order; each step is `async ({ sequelize, transaction, faker, now }) => void`. They share
 // one seeded Faker, so adding a step at the end never changes the data of the steps before it.
-const SEED_STEPS = [reference, users, vendors, riders, subscriptions, catalogue, social, orders, deliveries];
+const SEED_STEPS = [
+  reference,
+  users,
+  vendors,
+  riders,
+  subscriptions,
+  catalogue,
+  social,
+  orders,
+  deliveries,
+  reviews,
+  payouts,
+];
 
 const run = async () => {
   // The demo world replaces real data; production gets its own reference-data seed (phase 22)
