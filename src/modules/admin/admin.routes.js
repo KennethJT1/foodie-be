@@ -25,6 +25,9 @@ const router = Router();
 
 router.use(authenticate, requireRole('admin'));
 
+// GET /admin/overview: the dashboard
+router.get('/overview', requirePermission('dashboard.view'), asyncHandler(controller.overview));
+
 const manage = requirePermission('admin_users.manage');
 router.get('/users', manage, asyncHandler(controller.listAdmins));
 router.post('/users', manage, validate({ body: createAdminBody }), asyncHandler(controller.createAdmin));

@@ -7,6 +7,7 @@ import { createSeededFaker } from '../../core/utils/random.js';
 import { connectDatabase, sequelize } from '../index.js';
 import { truncateAllTables } from '../wipe.js';
 import { prepareMedia } from './media.js';
+import { activity } from './steps/activity.js';
 import { catalogue } from './steps/catalogue.js';
 import { deliveries } from './steps/deliveries.js';
 import { orders } from './steps/orders.js';
@@ -37,6 +38,7 @@ const SEED_STEPS = [
   payouts,
   refunds,
   support,
+  activity,
 ];
 
 const run = async () => {

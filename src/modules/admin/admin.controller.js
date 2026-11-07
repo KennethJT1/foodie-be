@@ -2,8 +2,10 @@ import { respond } from '../../core/http/index.js';
 import * as auditLog from '../audit/audit.service.js';
 import * as settings from '../settings/settings.service.js';
 import * as adminUsers from './adminUsers.service.js';
+import * as dashboard from './overview.service.js';
 import * as roles from './roles.service.js';
 
+export const overview = async (req, res) => respond.ok(res, await dashboard.overview(req.query));
 export const listAdmins = async (req, res) => respond.paginated(res, await adminUsers.listAdmins(req.query));
 export const createAdmin = async (req, res) =>
   respond.created(res, await adminUsers.createAdmin(req.user, req.body, req));

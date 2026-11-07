@@ -1,7 +1,8 @@
 // Orders and their payments (handoff 8.4): 360 over the last 90 days (Mama Put weighted ×3, Ada ×2;
-// delivered 20 : cancelled 1.2 : rejected 1), today's live queue at Mama Put, Ada's order on its
-// way with a rider, and 24 delivered trips for Tunde. Payments: card 60% / transfer 30% / USSD 10%,
-// settled after 1.5 days, about 1.5% flagged, refunded when the order was cancelled or rejected.
+// delivered 20 : cancelled 1.2 : rejected 1), today's live queue at Mama Put, 26 more live orders at
+// other stores, Ada's order on its way with a rider, and 24 delivered trips for Tunde. Payments:
+// card 60% / transfer 30% / USSD 10%, settled after 1.5 days, about 1.5% flagged, refunded when the
+// order was cancelled or rejected.
 // Deliveries, reviews and refunds come with their phases.
 import { seedId } from '../ids.js';
 import { Op } from 'sequelize';
@@ -238,6 +239,38 @@ export const orders = async ({ transaction, faker, now }) => {
       status: 'delivered',
       createdAt: faker.date.between({ from: now - 75 * DAY, to: now - 4 * 60 * MINUTE }),
       riderId: seedId('rid_tunde'),
+    });
+  }
+
+  // 26 more live orders today at other stores (handoff 8.4). Ages keep every step in the past and
+  // paid ones inside the accept window; each moving order gets its own free rider.
+  const AGES = {
+    paid: [1, 4],
+    accepted: [15, 30],
+    preparing: [30, 50],
+    ready_for_pickup: [45, 70],
+    rider_assigned: [60, 90],
+    picked_up: [75, 110],
+  };
+  const busy = new Set([lagosRiders[2]?.id, lagosRiders[3]?.id].filter(Boolean));
+  const otherStores = vendors.filter((v) => v.id !== mamaPut.id && menu.get(v.id)?.length);
+  for (let i = 0; i < 26; i += 1) {
+    const vendor = faker.helpers.arrayElement(otherStores);
+    let status = faker.helpers.arrayElement(Object.keys(AGES));
+    let riderId;
+    if (RIDER_STEPS.includes(status)) {
+      riderId = ridersIn(vendor.city).find((r) => !busy.has(r.id))?.id;
+      // No free rider in that city: it waits for one instead
+      if (riderId) busy.add(riderId);
+      else status = 'ready_for_pickup';
+    }
+    const [min, max] = AGES[status];
+    createOrder({
+      customer: faker.helpers.arrayElement(others),
+      vendor,
+      status,
+      createdAt: minsAgo(faker.number.int({ min, max })),
+      riderId,
     });
   }
 

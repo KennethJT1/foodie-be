@@ -9157,6 +9157,57 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Admin · Overview",
+      "item": [
+        {
+          "name": "Overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "dashboard.view. GMV and orders today (cancelled / rejected excluded) with % change from yesterday (null when yesterday was 0), active deliveries and orders, MRR from active and grace plans (yearly counts 1/12), this Lagos month's delivery-fee revenue from delivered orders, sign-ups in the last 7 days, online riders, waiting work (pending vendors / riders, disputed or escalated refunds) and a daily series of `days` (default 14, max 90).",
+            "url": {
+              "raw": "{{baseUrl}}/admin/overview?days=14",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "overview"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "14"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

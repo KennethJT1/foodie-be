@@ -84,3 +84,6 @@ ADMIN_ENDPOINTS.push(
   ['POST', '/api/v1/admin/tickets/tkt_nobody/messages', 'support.manage'],
   ['GET', '/api/v1/admin/agents', 'support.manage'],
 );
+
+// Phase 21: dashboard
+ADMIN_ENDPOINTS.push(['GET', '/api/v1/admin/overview', 'dashboard.view']);
