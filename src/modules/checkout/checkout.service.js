@@ -10,6 +10,8 @@ import { buildListQuery, paginate } from '../../core/query/index.js';
 import { deliveryCode, orderCode, uniqueCode } from '../../core/utils/index.js';
 import { models, withTransaction } from '../../db/index.js';
 import { paystack, paystackMode } from '../../integrations/paystack/paystack.client.js';
+import { emitTo } from '../../realtime/emit.js';
+import { rooms } from '../../realtime/rooms.js';
 import { notify } from '../notifications/notifications.service.js';
 import { loadOrderDetail, scheduleAutoReject } from '../orders/orders.service.js';
 import { getSettings } from '../settings/settings.service.js';
@@ -210,6 +212,14 @@ export const confirmOrderPayment = async (reference, { userId } = {}) => {
     return createOrder(payment, tx, transaction);
   });
   if (created) {
+    // The vendor dashboard plays a sound and adds the order to its live queue
+    emitTo(rooms.vendor(created.vendorId), 'vendor:order:new', {
+      vendorId: created.vendorId,
+      orderId: created.id,
+      code: created.code,
+      total: created.total,
+      acceptDeadline: created.acceptDeadline.toISOString(),
+    });
     await scheduleAutoReject(created).catch((err) =>
       logger.error({ err, orderId: created.id }, 'Could not schedule auto-reject; vendor reads will sweep it'),
     );

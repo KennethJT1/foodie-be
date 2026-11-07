@@ -3,6 +3,8 @@ import { buildListQuery, paginate } from '../../core/query/index.js';
 import { logger } from '../../config/logger.js';
 import { addJob, jobId } from '../../core/queue/index.js';
 import { models, newId } from '../../db/index.js';
+import { emitAfterCommit } from '../../realtime/emit.js';
+import { rooms } from '../../realtime/rooms.js';
 
 const { Notification } = models;
 
@@ -50,16 +52,20 @@ export const markAllRead = async (userId) => {
   return { done: true };
 };
 
-/** Inserts the row; an existing id is left alone, so retried jobs never duplicate. */
+/**
+ * Inserts the row; an existing id is left alone, so retried jobs never duplicate. A new row is
+ * pushed to the user's sockets as `notification:new` once it commits (the bell also polls).
+ */
 export const createNotification = async (
   { id = newId(), userId, type, title, body, link, data },
   { transaction } = {},
 ) => {
-  const [notification] = await Notification.findOrCreate({
+  const [notification, created] = await Notification.findOrCreate({
     where: { id },
     defaults: { userId, type, title, body, link, data },
     transaction,
   });
+  if (created) emitAfterCommit(transaction, rooms.user(userId), 'notification:new', toNotificationDto(notification));
   return notification;
 };
 

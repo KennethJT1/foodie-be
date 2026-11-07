@@ -10,6 +10,8 @@ import { addJob, getQueue, jobId } from '../../core/queue/index.js';
 import { lockForUpdate, models, withTransaction } from '../../db/index.js';
 import { ACTIVE_ORDER_STATUSES } from '../../db/models/order.model.js';
 import { paystack, paystackMode } from '../../integrations/paystack/paystack.client.js';
+import { emitAfterCommit } from '../../realtime/emit.js';
+import { rooms } from '../../realtime/rooms.js';
 import { notify } from '../notifications/notifications.service.js';
 import { toAddressDto } from '../vendors/vendors.presenter.js';
 
@@ -105,6 +107,21 @@ const DETAIL_INCLUDE = [
   { model: Payment, as: 'payment' },
 ];
 
+/** The order's rider as the detail (and `order:status`) shows it; null before one is assigned. */
+const toOrderRiderDto = (r) =>
+  r
+    ? {
+        id: r.id,
+        name: r.user?.name ?? '',
+        phone: r.user?.phone ?? null,
+        vehicleType: r.vehicleType,
+        plateNumber: r.plateNumber,
+        rating: r.rating,
+        lat: r.lat,
+        lng: r.lng,
+      }
+    : null;
+
 /** The detail: order plus vendor, rider, delivery (phase 17), payment and refund (phase 19). */
 export const toOrderDetailDto = async (o, viewer) => {
   const v = o.vendor;
@@ -122,16 +139,7 @@ export const toOrderDetailDto = async (o, viewer) => {
       lng: v.lng,
       address: toAddressDto(v),
     },
-    rider: r && {
-      id: r.id,
-      name: r.user?.name ?? '',
-      phone: r.user?.phone ?? null,
-      vehicleType: r.vehicleType,
-      plateNumber: r.plateNumber,
-      rating: r.rating,
-      lat: r.lat,
-      lng: r.lng,
-    },
+    rider: toOrderRiderDto(r),
     delivery: null,
     payment: p && {
       reference: p.reference,
@@ -237,7 +245,32 @@ export const transition = async (order, status, { by, note, transaction, fields 
     },
     { transaction },
   );
-  // Socket.IO (phase 16) emits order:status from here
+  emitAfterCommit(transaction, rooms.order(order.id), 'order:status', () => orderStatusPayload(order.id));
+};
+
+/**
+ * `order:status` (handoff section 5): { orderId, status, statusHistory, updatedAt, rider?, delivery? }.
+ * Read after commit, so subscribers see exactly what GET /orders/{id} returns.
+ */
+export const orderStatusPayload = async (orderId) => {
+  const o = await Order.findByPk(orderId, {
+    include: [
+      {
+        model: Rider,
+        as: 'rider',
+        include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'phone'] }],
+      },
+    ],
+  });
+  const rider = toOrderRiderDto(o.rider);
+  return {
+    orderId: o.id,
+    status: o.status,
+    statusHistory: o.statusHistory,
+    updatedAt: iso(o.updatedAt),
+    ...(rider && { rider }),
+    // delivery joins in phase 17
+  };
 };
 
 /**

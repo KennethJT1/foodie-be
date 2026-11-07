@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-04 · Current phase: **16** · Next up: **Phase 16 — Real time (Socket.IO)** (emit `order:status` from `transition()` in `orders.service.js` and `vendor:order:new` after order creation; confirm CI is green on the first push)
+Last updated: 2026-11-07 · Current phase: **17** · Next up: **Phase 17 — Dispatch, deliveries, GPS, live map, chat** (deliveries / delivery_offers / chat_messages tables, then the dispatch queue; add `rider:subscribe` and `admin:live-map:subscribe` to `CAN_JOIN` in `src/realtime/server.js`)
 
 ## How to use this file (read first in every new chat)
 
@@ -38,7 +38,7 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 13 | Catalogue, vendor menu, store, staff | 16 | 16/16 | ✅ |
 | 14 | Social, feed and moderation | 16 | 16/16 | ✅ |
 | 15 | Checkout, payments, orders, vendor sales | 18 | 18/18 | ✅ |
-| 16 | Real time (Socket.IO) | — | — | ⬜ |
+| 16 | Real time (Socket.IO) | — | — | ✅ |
 | 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 0/11 | ⬜ |
 | 18 | Reviews, rider trips, earnings, payouts | 9 | 0/9 | ⬜ |
 | 19 | Refunds | 9 | 0/9 | ⬜ |
@@ -54,7 +54,8 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Area | File(s) | State |
 | --- | --- | --- |
 | Express app, middleware chain | `src/app.js` | Built: requestId, helmet, cors, compression, raw body for webhook, json, cookieParser, pino-http, rate limit |
-| Server + graceful shutdown | `src/server.js` | Built (HTTP only; no Socket.IO yet); closes queues, Redis, DB |
+| Server + graceful shutdown | `src/server.js` | One HTTP server for REST and Socket.IO (port 4000); shutdown disconnects sockets, then closes queues, Redis, DB |
+| Real time | `src/realtime/{server,emit,rooms}.js` | Socket.IO 4 at `/socket.io`, same CORS origins, Redis adapter (key `<prefix>:socket.io`). JWT in `auth.token` checked on connect (`connect_error` UNAUTHENTICATED / ACCOUNT_BANNED / ACCOUNT_SUSPENDED). Every socket joins `user:{id}`; `order:subscribe` (customer, its vendor, its rider, admin with `orders.view`) and `vendor:subscribe` (owner) check access first and ack `{ ok }` or `{ ok: false, error: { code: 'NOT_FOUND' } }`. `emitTo(room, event, payload)` / `emitAfterCommit(tx, …)` work from any process: the API uses its server, the worker and scheduler publish through `@socket.io/redis-emitter`. Events: `order:status` (every committed `transition()`), `vendor:order:new` (paid order created), `notification:new` (every new in-app row) |
 | Redis | `src/config/redis.js` | ioredis via `REDIS_URL` (lazy connect); every key under `REDIS_KEY_PREFIX` (default `kjt:<NODE_ENV>`); `closeRedis()` |
 | Queues | `src/core/queue/*`, `src/worker.js`, `src/scheduler.js` | `QUEUES` definitions (only `notifications` so far: concurrency 20, 5 attempts, exponential 10 s); `getQueue` / `addJob` / `jobId()`; `createWorker` routes by job name (unknown name → `UnrecoverableError`); worker process with graceful shutdown; scheduler registers `SCHEDULES` (empty) |
 | Notifications | `src/modules/notifications/*`, `src/db/models/notification.model.js`, migration `20261029100000-create-notifications.cjs` | Table + model; service: list (`type`, `unread=true`, scoped), unread count, mark read (404 if not yours), read all; `notify(userId, payload, { transaction, sms, email })`; `notifyLater()`; jobs `sms.send`, `email.send`, `inapp.create`. Mounted at `/notifications` behind `authenticate` |
@@ -342,12 +343,12 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `GET /admin/payments`
   - [x] `POST /admin/payments/{id}/reconcile`
 
-### Phase 16 — Real time (Socket.IO) ⬜
+### Phase 16 — Real time (Socket.IO) ✅
 
-- [ ] Socket.IO server, Redis adapter, JWT on connect, room join checks
-- [ ] `order:subscribe` / `order:unsubscribe` → `order:status`
-- [ ] `vendor:subscribe` / `vendor:unsubscribe` → `vendor:order:new`
-- [ ] `notification:new` (optional)
+- [x] Socket.IO server, Redis adapter, JWT on connect, room join checks
+- [x] `order:subscribe` / `order:unsubscribe` → `order:status`
+- [x] `vendor:subscribe` / `vendor:unsubscribe` → `vendor:order:new`
+- [x] `notification:new` (optional)
 
 ### Phase 17 — Dispatch, deliveries, GPS, live map, chat ⬜
 
@@ -523,6 +524,11 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-05 | Moderation "remove" on a dish hides it (like the mock) instead of deleting it | The vendor still sees it (`isHidden`) and can contact support |
 | 2026-11-05 | `paginate()` no longer passes `attributes` to the count query | Selecting columns with COUNT fails under ONLY_FULL_GROUP_BY (`GET /vendors`) |
 | 2026-11-05 | Every primary and foreign key is a UUID in `CHAR(36)` (was `VARCHAR(64)`). Generated rows get v7; the seed's fixed rows (handoff 8.2 `usr_customer_ada`, `ven_mama_put`, `plan_pro`, `cat-rice`…) get name-based v5 UUIDs from `seedId(key)`, stable across reseeds. Polymorphic `target_id` columns stay strings; RBAC `admin_roles` / `permissions` keep their code keys (`support`, `orders.view`). Migrations edited in place (only dev has run them); dev and test DBs rebuilt | Project owner asked for real UUIDs instead of text IDs. Demo IDs: Ada `0c0a0515-0455-570e-83ce-74f917871add`, Bisi `5aac0f78-bfee-5921-982e-afb195638291`, Mama Put `0ecd0425-3297-5758-908c-bbd6d300acfe`, Tunde (rider) `e0d63026-c8f8-5408-b070-2ec7df8511da`, plans basic / pro / premium `e2940a83-9a3a-5562-bbd1-34439452af37` / `d389d116-d68d-5332-b354-9b998abbd1e3` / `aa87cd0b-96d5-5361-8a79-dde94af97ff6` |
+| 2026-11-07 | Model associations moved from per-model `associate()` hooks into `src/db/models/association.js`; `loadModels(db, dir, associate)` takes the association function | Project owner wants every association in one file |
+| 2026-11-07 | Subscribe events take an acknowledgement callback (`{ ok: true }` / `{ ok: false, error: { code, message } }`); a room you may not join answers `NOT_FOUND`, like REST | The handoff doesn't say how a refused join is reported; the ack is optional, so clients that ignore it still work |
+| 2026-11-07 | Sockets are not disconnected when the access token expires; the token is checked on connect and the room checks on every subscribe | socket.io-client doesn't reconnect after a server-side disconnect, so the order page would silently stop updating |
+| 2026-11-07 | Events are emitted after commit and are best effort (a Redis failure is logged, never raised); `order:status` is read fresh after commit | REST stays the source of truth; nothing is pushed for a rolled-back change |
+| 2026-11-07 | Phase 16 has no REST endpoints, so Postman is unchanged; socket behaviour is covered by `tests/integration/realtime/realtime.test.js` | Nothing to add to the collection |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -544,6 +550,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-07 | 16 | Socket.IO on the API server with the Redis adapter, JWT check on connect, `user:` / `order:` / `vendor:` rooms with join checks; `order:status` from every committed transition, `vendor:order:new` on a paid order, `notification:new` on every new in-app row; worker / scheduler emit through `@socket.io/redis-emitter`; realtime integration tests. Also: model associations moved into `src/db/models/association.js`. |
 | 2026-11-05 | 15 (follow-up) | IDs switched to UUIDs: `CHAR(36)` keys in every migration and model, seed fixed IDs via `seedId()` / `SEED_IDS`, tests and Postman examples updated; dev and test DBs rebuilt and dev reseeded. |
 | 2026-11-05 | 15 | Checkout quote, payments initialize / verify (order created on payment, idempotent, also via webhook), `/me/payments`, scoped orders, customer cancel, vendor accept / preparing / ready / reject with refunds, accept deadline job, vendor stats / sales / daily, admin customers and payments with reconcile (18 endpoints); orders and order_items; dispatch queue; settlement and reconciliation schedules; `orders` seed step; Postman "Checkout and orders" and "Admin · Customers and payments" folders; customer / payment endpoints in the permission matrix. Dev DB migrated and reseeded. |
 | 2026-11-05 | 14 | Feed, likes, follows, comments, reports, vendor engagement / comments and admin moderation (16 endpoints); likes, follows, comments, reports tables; isLiked / isFollowing on catalogue reads; `social` seed step; Postman "Social" and "Admin · Moderation" folders; moderation endpoints in the permission matrix. Dev DB migrated and reseeded. |
