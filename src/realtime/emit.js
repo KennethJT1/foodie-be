@@ -41,6 +41,9 @@ export const emitTo = (room, event, payload) => {
 /**
  * Emits once the transaction commits (nothing is sent for a rollback). `payload` may be a function,
  * called after commit, for payloads that need a fresh read.
+ *
+ * Sequelize awaits afterCommit hooks before the caller's transaction resolves, so the send is
+ * started and not awaited: a fresh read for the payload never delays the HTTP response.
  */
 export const emitAfterCommit = (transaction, room, event, payload) => {
   const send = async () => {
@@ -50,6 +53,9 @@ export const emitAfterCommit = (transaction, room, event, payload) => {
       logger.warn({ err, room, event }, 'Socket emit failed');
     }
   };
-  if (transaction) transaction.afterCommit(send);
-  else send();
+  if (transaction) {
+    transaction.afterCommit(() => {
+      void send();
+    });
+  } else void send();
 };
