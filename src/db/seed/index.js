@@ -17,6 +17,7 @@ import { social } from './steps/social.js';
 import { reference } from './steps/reference.js';
 import { riders } from './steps/riders.js';
 import { subscriptions } from './steps/subscriptions.js';
+import { support } from './steps/support.js';
 import { users } from './steps/users.js';
 import { vendors } from './steps/vendors.js';
 
@@ -35,6 +36,7 @@ const SEED_STEPS = [
   reviews,
   payouts,
   refunds,
+  support,
 ];
 
 const run = async () => {

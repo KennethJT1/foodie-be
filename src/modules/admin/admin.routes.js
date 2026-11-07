@@ -8,6 +8,8 @@ import * as dispatch from '../deliveries/deliveries.controller.js';
 import { reassignBody } from '../deliveries/deliveries.schemas.js';
 import * as orders from '../orders/orders.controller.js';
 import * as payouts from '../payouts/payouts.controller.js';
+import * as support from '../support/support.controller.js';
+import { agentMessageBody, updateTicketBody } from '../support/support.schemas.js';
 import { markPaidBody } from '../payouts/payouts.schemas.js';
 import { customerStatusBody, reconcileBody } from '../orders/orders.schemas.js';
 import * as riders from '../riders/riders.controller.js';
@@ -119,6 +121,24 @@ router.post(
   asyncHandler(dispatch.reassign),
 );
 router.get('/live-map', requirePermission('live_map.view'), asyncHandler(dispatch.liveMap));
+
+// Support inbox
+const supportManage = requirePermission('support.manage');
+router.get('/tickets', supportManage, asyncHandler(support.listInbox));
+router.get('/tickets/:id', supportManage, validate({ params: idParams }), asyncHandler(support.getTicket));
+router.patch(
+  '/tickets/:id',
+  supportManage,
+  validate({ params: idParams, body: updateTicketBody }),
+  asyncHandler(support.updateTicket),
+);
+router.post(
+  '/tickets/:id/messages',
+  supportManage,
+  validate({ params: idParams, body: agentMessageBody }),
+  asyncHandler(support.replyAsAgent),
+);
+router.get('/agents', supportManage, asyncHandler(support.listAgents));
 
 // Rider payout statements
 const payoutsManage = requirePermission('payouts.manage');

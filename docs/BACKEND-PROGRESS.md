@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-07 · Current phase: **20** · Next up: **Phase 20 — Support tickets and admin inbox** (support_tickets and support_messages tables; customer / vendor / rider help centre and the admin inbox with agents)
+Last updated: 2026-11-07 · Current phase: **21** · Next up: **Phase 21 — Admin overview and the full demo world** (`GET /admin/overview`; 26 more active orders today, 60 audit entries and demo notifications in the seeder)
 
 ## How to use this file (read first in every new chat)
 
@@ -42,10 +42,10 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 11/11 | ✅ |
 | 18 | Reviews, rider trips, earnings, payouts | 9 | 9/9 | ✅ |
 | 19 | Refunds | 9 | 9/9 | ✅ |
-| 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
+| 20 | Support tickets and admin inbox | 10 | 10/10 | ✅ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **151/162** | |
+| | **Total** | **162** | **161/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -97,6 +97,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Reviews | `src/modules/reviews/*`, table `reviews` (unique order + target) | `POST /orders/{id}/reviews` (customer, delivered only, once per target → 409 ALREADY_SUBMITTED; running average on the vendor / rider; `ratedVendor` / `ratedRider`; vendor notified), `GET /reviews` (public; targetType, targetId, rating; search comment, name), `POST /reviews/{id}/reply` (store owner, once) |
 | Rider money and payouts | `src/modules/payouts/*`, table `rider_payout_statements` (unique rider + month) | `/rider/trips` (delivered deliveries; search code, vendor, drop-off area), `/rider/earnings` (Lagos month + today), `/rider/statements`; `/admin/payouts` list / approve / mark-paid (audited, rider notified). Job `payouts:payouts.statements` (scheduler 02:00 on the 1st) makes last month's drafts from delivered trips (amount = earnings fixed on each delivery); re-runs add nothing |
 | Refunds | `src/modules/refunds/*`, table `refunds` (one per order; snapshots, photos, deadline, vendor_response, timeline and internal comments JSON, `deadline_handled_at`) | Scoped `/refunds` list / detail (customers own, vendors their store's, admins with refunds.view; comments for admins only); create (delivered, one per order, ≤ subtotal, own refund_photo uploads); vendor respond (accept full / part, reject with reason) and mark-paid; customer confirm / dispute (admins told); admin comments and escalate (audited). Deadline: delayed job `refunds:refund.deadline` plus hourly `refunds.sweep` run `refundMissedAction` once (escalate; warn = vendor told, stays open; suspend = store suspended + escalated). `refund` on the order detail |
+| Support | `src/modules/support/*`, tables `support_tickets` (number from 1000, user / role / order snapshots, priority, assignee, `last_message` / `has_reply` / `message_count` previews), `support_messages` (`internal` notes) | `/support/tickets` for customers, vendors and riders (own only, notes never returned; money words → high priority; reply re-opens pending / resolved, 409 when closed; resolve). `/admin/tickets` inbox (`assignee` me / none / id, status, priority, userRole, search), detail with notes, PATCH status / priority / assignee (support agents only; audited `ticket.updated`), reply (user notified, open → pending, first writer takes it) or internal note; `/admin/agents` |
 | Admin customers and payments | `src/modules/payments/{adminPayments,settlement}.service.js` | `/admin/customers` (ordersCount) and status changes (audited), `/admin/payments` (split summary, flagged) and reconcile (audited); hourly `payments.settle` (settling → settled after 36 h) and `payments.reconcile` (`missing_webhook` when Paystack never confirmed) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
@@ -404,21 +405,21 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `POST /refunds/{id}/comments`
   - [x] `POST /refunds/{id}/escalate`
 
-### Phase 20 — Support tickets and admin inbox ⬜
+### Phase 20 — Support tickets and admin inbox ✅
 
-- [ ] Tables: support_tickets, support_messages
-- [ ] Seed: 11 tickets
+- [x] Tables: support_tickets, support_messages
+- [x] Seed: 11 tickets
 - Endpoints:
-  - [ ] `GET /support/tickets`
-  - [ ] `POST /support/tickets`
-  - [ ] `GET /support/tickets/{id}`
-  - [ ] `POST /support/tickets/{id}/messages`
-  - [ ] `POST /support/tickets/{id}/resolve`
-  - [ ] `GET /admin/tickets`
-  - [ ] `GET /admin/tickets/{id}`
-  - [ ] `PATCH /admin/tickets/{id}`
-  - [ ] `POST /admin/tickets/{id}/messages`
-  - [ ] `GET /admin/agents`
+  - [x] `GET /support/tickets`
+  - [x] `POST /support/tickets`
+  - [x] `GET /support/tickets/{id}`
+  - [x] `POST /support/tickets/{id}/messages`
+  - [x] `POST /support/tickets/{id}/resolve`
+  - [x] `GET /admin/tickets`
+  - [x] `GET /admin/tickets/{id}`
+  - [x] `PATCH /admin/tickets/{id}`
+  - [x] `POST /admin/tickets/{id}/messages`
+  - [x] `GET /admin/agents`
 
 ### Phase 21 — Admin overview and the full demo world ⬜
 
@@ -546,6 +547,9 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-07 | Missed refund deadline: `warn` keeps the request open and notifies the vendor (no timeline step: the contract's step statuses have no "warned"); `suspend` suspends the store and escalates the refund; every action tells refunds.view admins and runs once (`deadline_handled_at`) | The handoff names the three actions without detail |
 | 2026-11-07 | A vendor may still answer a request after its deadline while it is `requested` (only `warn` leaves it so) | Lets a warned vendor fix it |
 | 2026-11-07 | Refund photos must be the customer's own `refund_photo` uploads (422 `photos.N`), at most 3 | Same rule as every other attached file |
+| 2026-11-07 | Support notifications use type `system` (the mock sends `support`) | Contract notification enum |
+| 2026-11-07 | Ticket numbers are MAX + 1 inside a transaction, retried on the unique index if two tickets race | No auto-increment beside UUID keys; tickets are rare enough |
+| 2026-11-07 | `emitAfterCommit` starts the socket send without awaiting it | Sequelize awaits afterCommit hooks before the transaction resolves, so the fresh `order:status` read was adding a round trip to every order step |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -568,6 +572,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-07 | 20 | Support tickets and admin inbox (10 endpoints); support_tickets and support_messages tables; `support` seed step (11 tickets with replies and internal notes); Postman "Support" and "Admin · Support inbox" folders; inbox endpoints in the permission matrix. |
 | 2026-11-07 | 19 | Refunds (9 endpoints): request, scoped list / detail, vendor respond / mark-paid, customer confirm / dispute, admin comments / escalate; refunds table; missed-deadline job and hourly sweep (`refunds` queue) with escalate / warn / suspend; `refund` on the order detail; `refunds` seed step (20 across every status); Postman "Refunds" folder; admin refund actions in the permission matrix. |
 | 2026-11-07 | 18 | Reviews (rate vendor / rider, public list, vendor reply), rider trips / earnings / statements, admin payouts approve / mark-paid (9 endpoints); reviews and rider_payout_statements tables; monthly statement job and schedule (`payouts` queue); `reviews` and `payouts` seed steps; Postman "Reviews", "Rider trips and earnings" and "Admin · Payouts" folders; payout endpoints in the permission matrix. |
 | 2026-11-07 | 17 | Dispatch and deliveries (11 endpoints): rider status, offers with 30 s expiry and next-rider hand-off, accept / decline, active delivery, pickup, complete with the code; customer–rider chat; admin reassign and live map; `nearOrderId`, `isBusy`, `recentTrips` on admin riders. Tables deliveries, delivery_offers, chat_messages. Socket `rider:subscribe`, `rider:location`, `rider:job:offer`, `chat:message`, `admin:live-map`. `deliveries` seed step (a delivery per ridden order, routes, live riders online). Postman "Dispatch, deliveries and chat" and "Admin · Dispatch" folders; dispatch endpoints in the permission matrix. |

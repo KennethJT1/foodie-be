@@ -32,6 +32,8 @@ export const defineAssociations = (models) => {
     RiderPayoutStatement,
     Subscription,
     SubscriptionInvoice,
+    SupportMessage,
+    SupportTicket,
     Upload,
     User,
     Vendor,
@@ -155,4 +157,12 @@ export const defineAssociations = (models) => {
   Refund.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
   Refund.belongsTo(User, { as: 'customer', foreignKey: 'customerId' });
   Refund.belongsTo(Vendor, { as: 'vendor', foreignKey: 'vendorId' });
+
+  // Support tickets
+  SupportTicket.hasMany(SupportMessage, { as: 'messages', foreignKey: 'ticketId' });
+  SupportTicket.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+  SupportTicket.belongsTo(User, { as: 'assignee', foreignKey: 'assigneeId' });
+  SupportTicket.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+  SupportMessage.belongsTo(SupportTicket, { as: 'ticket', foreignKey: 'ticketId' });
+  SupportMessage.belongsTo(User, { as: 'author', foreignKey: 'authorId' });
 };

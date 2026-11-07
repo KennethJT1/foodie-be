@@ -75,3 +75,12 @@ ADMIN_ENDPOINTS.push(
   ['POST', '/api/v1/refunds/rfd_nobody/comments', 'refunds.view'],
   ['POST', '/api/v1/refunds/rfd_nobody/escalate', 'refunds.escalate'],
 );
+
+// Phase 20: support inbox
+ADMIN_ENDPOINTS.push(
+  ['GET', '/api/v1/admin/tickets', 'support.manage'],
+  ['GET', '/api/v1/admin/tickets/tkt_nobody', 'support.manage'],
+  ['PATCH', '/api/v1/admin/tickets/tkt_nobody', 'support.manage'],
+  ['POST', '/api/v1/admin/tickets/tkt_nobody/messages', 'support.manage'],
+  ['GET', '/api/v1/admin/agents', 'support.manage'],
+);

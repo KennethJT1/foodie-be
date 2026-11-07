@@ -18,6 +18,7 @@ import riderRoutes from './modules/riders/riders.routes.js';
 import deliveryRoutes, { chatRoutes } from './modules/deliveries/deliveries.routes.js';
 import reviewRoutes, { orderReviewRoutes } from './modules/reviews/reviews.routes.js';
 import refundRoutes from './modules/refunds/refunds.routes.js';
+import supportRoutes from './modules/support/support.routes.js';
 import {
   commentRoutes,
   feedRoutes,
@@ -59,6 +60,7 @@ router.use('/orders', chatRoutes);
 router.use('/orders', orderReviewRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/refunds', refundRoutes);
+router.use('/support', supportRoutes);
 router.use('/orders', orderRoutes);
 router.use('/deliveries', deliveryRoutes);
 router.use('/vendor', vendorRoutes);
