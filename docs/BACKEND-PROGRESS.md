@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-07 · Current phase: **19** · Next up: **Phase 19 — Refunds** (refunds table with timeline and comments; deadline job with `refundMissedAction`; `refund` on the order detail)
+Last updated: 2026-11-07 · Current phase: **20** · Next up: **Phase 20 — Support tickets and admin inbox** (support_tickets and support_messages tables; customer / vendor / rider help centre and the admin inbox with agents)
 
 ## How to use this file (read first in every new chat)
 
@@ -41,11 +41,11 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 16 | Real time (Socket.IO) | — | — | ✅ |
 | 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 11/11 | ✅ |
 | 18 | Reviews, rider trips, earnings, payouts | 9 | 9/9 | ✅ |
-| 19 | Refunds | 9 | 0/9 | ⬜ |
+| 19 | Refunds | 9 | 9/9 | ✅ |
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **142/162** | |
+| | **Total** | **162** | **151/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -96,6 +96,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Dispatch and deliveries | `src/modules/deliveries/*`, tables `deliveries` (fee, `payout_pct` snapshot, `rider_earning`, pickup / dropoff JSON, route JSON), `delivery_offers`, `chat_messages`; `orders.dispatch_alerted_at` | `dispatchOrder()` offers a ready order to the nearest online, approved, free (not on a delivery, no live offer), active rider in the vendor's city who hasn't had it; rows locked so an order or rider is never doubled. Offers last `riderOfferTimeoutSec` (job `dispatch:offer.expire`; reads expire late ones too); decline / expiry / going offline → next rider; nobody → Dispatch admins (`orders.reassign`) notified once and `dispatch:order.dispatch` retried each minute. `findJobFor()` offers a freed rider (online, delivered, declined) the nearest waiting order. `/rider/status`, `/rider/offers`, accept (409 OFFER_GONE) / decline, `/rider/delivery`, pickup, complete (code → 422; earning = payoutPct% of fee; tripsCount +1). Socket: `rider:subscribe`, `rider:location` (own socket, online only; stores, appends to the route, refreshes the order ETA, forwards to `order:{id}`), `rider:job:offer`, `chat:message`, `admin:live-map:subscribe` (snapshot now, then every 5 s per instance via `io.local`). `/admin/orders/{id}/reassign` (audited), `/admin/live-map`, `/admin/riders?nearOrderId`, `isBusy` and `recentTrips` on admin riders; `delivery` on the order detail and `order:status` |
 | Reviews | `src/modules/reviews/*`, table `reviews` (unique order + target) | `POST /orders/{id}/reviews` (customer, delivered only, once per target → 409 ALREADY_SUBMITTED; running average on the vendor / rider; `ratedVendor` / `ratedRider`; vendor notified), `GET /reviews` (public; targetType, targetId, rating; search comment, name), `POST /reviews/{id}/reply` (store owner, once) |
 | Rider money and payouts | `src/modules/payouts/*`, table `rider_payout_statements` (unique rider + month) | `/rider/trips` (delivered deliveries; search code, vendor, drop-off area), `/rider/earnings` (Lagos month + today), `/rider/statements`; `/admin/payouts` list / approve / mark-paid (audited, rider notified). Job `payouts:payouts.statements` (scheduler 02:00 on the 1st) makes last month's drafts from delivered trips (amount = earnings fixed on each delivery); re-runs add nothing |
+| Refunds | `src/modules/refunds/*`, table `refunds` (one per order; snapshots, photos, deadline, vendor_response, timeline and internal comments JSON, `deadline_handled_at`) | Scoped `/refunds` list / detail (customers own, vendors their store's, admins with refunds.view; comments for admins only); create (delivered, one per order, ≤ subtotal, own refund_photo uploads); vendor respond (accept full / part, reject with reason) and mark-paid; customer confirm / dispute (admins told); admin comments and escalate (audited). Deadline: delayed job `refunds:refund.deadline` plus hourly `refunds.sweep` run `refundMissedAction` once (escalate; warn = vendor told, stays open; suspend = store suspended + escalated). `refund` on the order detail |
 | Admin customers and payments | `src/modules/payments/{adminPayments,settlement}.service.js` | `/admin/customers` (ordersCount) and status changes (audited), `/admin/payments` (split summary, flagged) and reconcile (audited); hourly `payments.settle` (settling → settled after 36 h) and `payments.reconcile` (`missing_webhook` when Paystack never confirmed) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
@@ -388,20 +389,20 @@ An endpoint counts as done only when it matches the contract, has integration te
   - [x] `POST /admin/payouts/{id}/approve`
   - [x] `POST /admin/payouts/{id}/mark-paid`
 
-### Phase 19 — Refunds ⬜
+### Phase 19 — Refunds ✅
 
-- [ ] Table: refunds (timeline, comments); deadline job with `refundMissedAction`
-- [ ] Seed: ~20 refunds across all statuses
+- [x] Table: refunds (timeline, comments); deadline job with `refundMissedAction`
+- [x] Seed: ~20 refunds across all statuses
 - Endpoints:
-  - [ ] `GET /refunds`
-  - [ ] `POST /refunds`
-  - [ ] `GET /refunds/{id}`
-  - [ ] `POST /refunds/{id}/confirm`
-  - [ ] `POST /refunds/{id}/dispute`
-  - [ ] `POST /refunds/{id}/respond`
-  - [ ] `POST /refunds/{id}/mark-paid`
-  - [ ] `POST /refunds/{id}/comments`
-  - [ ] `POST /refunds/{id}/escalate`
+  - [x] `GET /refunds`
+  - [x] `POST /refunds`
+  - [x] `GET /refunds/{id}`
+  - [x] `POST /refunds/{id}/confirm`
+  - [x] `POST /refunds/{id}/dispute`
+  - [x] `POST /refunds/{id}/respond`
+  - [x] `POST /refunds/{id}/mark-paid`
+  - [x] `POST /refunds/{id}/comments`
+  - [x] `POST /refunds/{id}/escalate`
 
 ### Phase 20 — Support tickets and admin inbox ⬜
 
@@ -541,6 +542,10 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-07 | Reviews already given → 409 `ALREADY_SUBMITTED`; reviewing before delivery → 409 `INVALID_STATUS`; a bad `targetType` → 422 (the mock sends 400) | Contract lists 409 without codes; validation errors are 422 everywhere else |
 | 2026-11-07 | A statement's `amount` is the sum of the earnings fixed on each delivery (each delivery keeps the payout % of its day); `payoutPct` on the statement is the setting when it was made | Changing the payout % mid-month must not re-price finished trips |
 | 2026-11-07 | Statements are made only for riders who delivered that month (the mock seeds every approved rider) | No zero-amount statements to approve |
+| 2026-11-07 | Refund 409s: wrong state → `INVALID_STATUS`; a second request for an order → `ALREADY_SUBMITTED` | Contract lists 409 without codes |
+| 2026-11-07 | Missed refund deadline: `warn` keeps the request open and notifies the vendor (no timeline step: the contract's step statuses have no "warned"); `suspend` suspends the store and escalates the refund; every action tells refunds.view admins and runs once (`deadline_handled_at`) | The handoff names the three actions without detail |
+| 2026-11-07 | A vendor may still answer a request after its deadline while it is `requested` (only `warn` leaves it so) | Lets a warned vendor fix it |
+| 2026-11-07 | Refund photos must be the customer's own `refund_photo` uploads (422 `photos.N`), at most 3 | Same rule as every other attached file |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -563,6 +568,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-07 | 19 | Refunds (9 endpoints): request, scoped list / detail, vendor respond / mark-paid, customer confirm / dispute, admin comments / escalate; refunds table; missed-deadline job and hourly sweep (`refunds` queue) with escalate / warn / suspend; `refund` on the order detail; `refunds` seed step (20 across every status); Postman "Refunds" folder; admin refund actions in the permission matrix. |
 | 2026-11-07 | 18 | Reviews (rate vendor / rider, public list, vendor reply), rider trips / earnings / statements, admin payouts approve / mark-paid (9 endpoints); reviews and rider_payout_statements tables; monthly statement job and schedule (`payouts` queue); `reviews` and `payouts` seed steps; Postman "Reviews", "Rider trips and earnings" and "Admin · Payouts" folders; payout endpoints in the permission matrix. |
 | 2026-11-07 | 17 | Dispatch and deliveries (11 endpoints): rider status, offers with 30 s expiry and next-rider hand-off, accept / decline, active delivery, pickup, complete with the code; customer–rider chat; admin reassign and live map; `nearOrderId`, `isBusy`, `recentTrips` on admin riders. Tables deliveries, delivery_offers, chat_messages. Socket `rider:subscribe`, `rider:location`, `rider:job:offer`, `chat:message`, `admin:live-map`. `deliveries` seed step (a delivery per ridden order, routes, live riders online). Postman "Dispatch, deliveries and chat" and "Admin · Dispatch" folders; dispatch endpoints in the permission matrix. |
 | 2026-11-07 | 16 | Socket.IO on the API server with the Redis adapter, JWT check on connect, `user:` / `order:` / `vendor:` rooms with join checks; `order:status` from every committed transition, `vendor:order:new` on a paid order, `notification:new` on every new in-app row; worker / scheduler emit through `@socket.io/redis-emitter`; realtime integration tests. Also: model associations moved into `src/db/models/association.js`. |

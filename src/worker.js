@@ -7,6 +7,7 @@ import { notificationProcessors } from './modules/notifications/notifications.jo
 import { dispatchProcessors } from './modules/orders/orders.jobs.js';
 import { paymentProcessors } from './modules/payments/payments.jobs.js';
 import { payoutProcessors } from './modules/payouts/payouts.jobs.js';
+import { refundProcessors } from './modules/refunds/refunds.jobs.js';
 import { subscriptionProcessors } from './modules/subscriptions/subscriptions.jobs.js';
 
 // Queue name → processors by job name. Each phase registers its queue here.
@@ -16,6 +17,7 @@ const PROCESSORS = {
   dispatch: dispatchProcessors,
   subscriptions: subscriptionProcessors,
   payouts: payoutProcessors,
+  refunds: refundProcessors,
 };
 
 const SHUTDOWN_TIMEOUT_MS = 30_000;

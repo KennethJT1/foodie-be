@@ -23,6 +23,7 @@ export const defineAssociations = (models) => {
     Permission,
     Plan,
     RefreshToken,
+    Refund,
     Report,
     Review,
     Rider,
@@ -148,4 +149,10 @@ export const defineAssociations = (models) => {
   Rider.hasMany(RiderPayoutStatement, { as: 'payoutStatements', foreignKey: 'riderId' });
   RiderPayoutStatement.belongsTo(Rider, { as: 'rider', foreignKey: 'riderId' });
   RiderPayoutStatement.belongsTo(User, { as: 'approver', foreignKey: 'approvedBy' });
+
+  // Refunds
+  Order.hasOne(Refund, { as: 'refund', foreignKey: 'orderId' });
+  Refund.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+  Refund.belongsTo(User, { as: 'customer', foreignKey: 'customerId' });
+  Refund.belongsTo(Vendor, { as: 'vendor', foreignKey: 'vendorId' });
 };

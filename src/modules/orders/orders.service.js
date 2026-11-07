@@ -12,12 +12,13 @@ import { ACTIVE_ORDER_STATUSES } from '../../db/models/order.model.js';
 import { paystack, paystackMode } from '../../integrations/paystack/paystack.client.js';
 import { emitAfterCommit } from '../../realtime/emit.js';
 import { toPublicDeliveryDto } from '../deliveries/deliveries.presenter.js';
+import { toRefundDto } from '../refunds/refunds.service.js';
 import { dispatchOrder, queueDispatch } from '../deliveries/dispatch.service.js';
 import { rooms } from '../../realtime/rooms.js';
 import { notify } from '../notifications/notifications.service.js';
 import { toAddressDto } from '../vendors/vendors.presenter.js';
 
-const { Delivery, FoodItem, Order, OrderItem, Payment, Rider, User, Vendor } = models;
+const { Delivery, FoodItem, Order, OrderItem, Payment, Refund, Rider, User, Vendor } = models;
 
 /** What the customer is told at each step (the frontend's ORDER_STATUS_META.customer). */
 const CUSTOMER_LINE = {
@@ -108,6 +109,7 @@ const DETAIL_INCLUDE = [
   { model: Vendor, as: 'vendor', paranoid: false },
   { model: Payment, as: 'payment' },
   { model: Delivery, as: 'delivery' },
+  { model: Refund, as: 'refund' },
 ];
 
 /** The order's rider as the detail (and `order:status`) shows it; null before one is assigned. */
@@ -125,7 +127,7 @@ const toOrderRiderDto = (r) =>
       }
     : null;
 
-/** The detail: order plus vendor, rider, delivery, payment and refund (phase 19). */
+/** The detail: order plus vendor, rider, delivery, payment and refund. */
 export const toOrderDetailDto = async (o, viewer) => {
   const v = o.vendor;
   const r = o.rider;
@@ -151,7 +153,7 @@ export const toOrderDetailDto = async (o, viewer) => {
       amount: p.amount,
       createdAt: iso(p.createdAt),
     },
-    refund: null,
+    refund: o.refund ? toRefundDto(o.refund, viewer) : null,
   };
 };
 

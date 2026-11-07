@@ -69,3 +69,9 @@ ADMIN_ENDPOINTS.push(
   ['POST', '/api/v1/admin/payouts/pst_nobody/approve', 'payouts.manage'],
   ['POST', '/api/v1/admin/payouts/pst_nobody/mark-paid', 'payouts.manage'],
 );
+
+// Phase 19: refunds (shared routes; the admin actions need these permissions)
+ADMIN_ENDPOINTS.push(
+  ['POST', '/api/v1/refunds/rfd_nobody/comments', 'refunds.view'],
+  ['POST', '/api/v1/refunds/rfd_nobody/escalate', 'refunds.escalate'],
+);

@@ -11,6 +11,7 @@ import { catalogue } from './steps/catalogue.js';
 import { deliveries } from './steps/deliveries.js';
 import { orders } from './steps/orders.js';
 import { payouts } from './steps/payouts.js';
+import { refunds } from './steps/refunds.js';
 import { reviews } from './steps/reviews.js';
 import { social } from './steps/social.js';
 import { reference } from './steps/reference.js';
@@ -33,6 +34,7 @@ const SEED_STEPS = [
   deliveries,
   reviews,
   payouts,
+  refunds,
 ];
 
 const run = async () => {
