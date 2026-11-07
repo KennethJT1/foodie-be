@@ -61,8 +61,8 @@ export const toProfileDto = (r, { bank, payoutPct }) => ({
   },
 });
 
-/** A row of GET /admin/riders (mock `riderRow`); `user` is included. */
-export const toAdminRiderRow = (r) => ({
+/** A row of GET /admin/riders (mock `riderRow`); `user` is included. `isBusy`: on a delivery now. */
+export const toAdminRiderRow = (r, { isBusy = false } = {}) => ({
   id: r.id,
   name: r.user?.name ?? '',
   phone: r.user?.phone ?? '',
@@ -71,8 +71,7 @@ export const toAdminRiderRow = (r) => ({
   plateNumber: r.plateNumber,
   approvalStatus: r.approvalStatus,
   isOnline: r.isOnline,
-  // Riders on a delivery (phase 17 sets this from active deliveries)
-  isBusy: false,
+  isBusy,
   rating: r.rating,
   ratingCount: r.ratingCount,
   tripsCount: r.tripsCount,

@@ -5,22 +5,34 @@
 // reconnects with a fresh token after a refresh. Each socket joins `user:{id}`; other rooms are
 // joined on request after a check:
 //
-//   order:subscribe / order:unsubscribe   { orderId }   customer, its vendor, its rider, admin with orders.view
-//   vendor:subscribe / vendor:unsubscribe { vendorId }  the store's owner
+//   order:subscribe / order:unsubscribe        { orderId }   customer, its vendor, its rider, admin with orders.view
+//   vendor:subscribe / vendor:unsubscribe      { vendorId }  the store's owner
+//   rider:subscribe / rider:unsubscribe        { riderId }   that rider (job offers arrive here)
+//   admin:live-map:subscribe / :unsubscribe    —             admins with live_map.view; a snapshot is
+//                                                            pushed as `admin:live-map` every few seconds
 //
-// Every subscribe accepts an acknowledgement callback: { ok: true } or { ok: false, error: { code, message } }.
+// The rider app also sends `rider:location` { riderId, lat, lng, heading } while online.
+// Every subscribe (and rider:location) accepts an acknowledgement callback: { ok: true } or
+// { ok: false, error: { code, message } }.
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Server } from 'socket.io';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { createRedis } from '../config/redis.js';
+import { permissionsFor } from '../core/auth/index.js';
 import { userFromAccessToken } from '../core/middlewares/auth.js';
 import { models } from '../db/index.js';
+import { liveMapSnapshot } from '../modules/deliveries/adminDispatch.service.js';
+import { recordLocation } from '../modules/deliveries/deliveries.service.js';
 import { orderScope } from '../modules/orders/orders.service.js';
 import { SOCKET_KEY, setLocalServer } from './emit.js';
 import { rooms } from './rooms.js';
 
 const NOT_FOUND = { code: 'NOT_FOUND', message: "We couldn't find that." };
+const FAILED = { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' };
+const LIVE_MAP_MS = 5000;
+
+const replier = (ack) => (typeof ack === 'function' ? ack : () => {});
 
 /** Join checks: resolve true when `user` may join the room for `id`. */
 const CAN_JOIN = {
@@ -30,12 +42,14 @@ const CAN_JOIN = {
   },
   vendor: async (user, vendorId) =>
     user.role === 'vendor' && Boolean(await models.Vendor.count({ where: { id: vendorId, ownerUserId: user.id } })),
+  rider: async (user, riderId) =>
+    user.role === 'rider' && Boolean(await models.Rider.count({ where: { id: riderId, userId: user.id } })),
 };
 
 /** `order:subscribe` + `order:unsubscribe` style handlers for one room kind. */
 const subscription = (socket, kind, idField) => {
   socket.on(`${kind}:subscribe`, async (payload, ack) => {
-    const reply = typeof ack === 'function' ? ack : () => {};
+    const reply = replier(ack);
     const id = payload?.[idField];
     try {
       if (typeof id !== 'string' || !id || !(await CAN_JOIN[kind](socket.data.user, id)))
@@ -44,7 +58,7 @@ const subscription = (socket, kind, idField) => {
       reply({ ok: true });
     } catch (err) {
       logger.error({ err, kind, id }, 'Socket subscribe failed');
-      reply({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' } });
+      reply({ ok: false, error: FAILED });
     }
   });
   socket.on(`${kind}:unsubscribe`, async (payload, ack) => {
@@ -54,8 +68,57 @@ const subscription = (socket, kind, idField) => {
   });
 };
 
-/** Starts Socket.IO on `httpServer`. Returns the server; close it with `closeRealtime(io)`. */
-export const attachRealtime = (httpServer) => {
+/** The admin live map: a snapshot on subscribe, then the periodic push (see startLiveMap). */
+const liveMap = (socket) => {
+  socket.on('admin:live-map:subscribe', async (payload, ack) => {
+    const reply = replier(typeof payload === 'function' ? payload : ack);
+    try {
+      const user = socket.data.user;
+      if (user.role !== 'admin' || !(await permissionsFor(user)).includes('live_map.view')) {
+        return reply({ ok: false, error: { code: 'FORBIDDEN', message: "You don't have access to the live map." } });
+      }
+      await socket.join(rooms.adminLiveMap);
+      reply({ ok: true });
+      socket.emit('admin:live-map', await liveMapSnapshot());
+    } catch (err) {
+      logger.error({ err }, 'Live map subscribe failed');
+      reply({ ok: false, error: FAILED });
+    }
+  });
+  socket.on('admin:live-map:unsubscribe', async (payload, ack) => {
+    await socket.leave(rooms.adminLiveMap);
+    replier(typeof payload === 'function' ? payload : ack)({ ok: true });
+  });
+};
+
+/**
+ * Every `ms`, pushes a snapshot to this instance's live-map sockets (io.local: each API instance
+ * serves its own sockets, so nobody gets it twice). Skips the query when nobody is watching here.
+ */
+const startLiveMap = (io, ms) => {
+  let busy = false;
+  const timer = setInterval(async () => {
+    if (busy || !io.of('/').adapter.rooms.get(rooms.adminLiveMap)?.size) return;
+    busy = true;
+    try {
+      io.local.to(rooms.adminLiveMap).emit('admin:live-map', await liveMapSnapshot());
+    } catch (err) {
+      logger.warn({ err }, 'Live map push failed');
+    } finally {
+      busy = false;
+    }
+  }, ms);
+  timer.unref();
+  return timer;
+};
+
+const timers = new WeakMap();
+
+/**
+ * Starts Socket.IO on `httpServer`. Returns the server; close it with `closeRealtime(io)`.
+ * `liveMapMs` sets how often the live map is pushed.
+ */
+export const attachRealtime = (httpServer, { liveMapMs = LIVE_MAP_MS } = {}) => {
   const io = new Server(httpServer, {
     path: '/socket.io',
     cors: { origin: env.CORS_ORIGINS, credentials: true },
@@ -80,14 +143,27 @@ export const attachRealtime = (httpServer) => {
     socket.join(rooms.user(socket.data.user.id));
     subscription(socket, 'order', 'orderId');
     subscription(socket, 'vendor', 'vendorId');
+    subscription(socket, 'rider', 'riderId');
+    liveMap(socket);
+    socket.on('rider:location', async (payload, ack) => {
+      const reply = replier(ack);
+      try {
+        reply(await recordLocation(socket.data.user, payload));
+      } catch (err) {
+        logger.error({ err }, 'rider:location failed');
+        reply({ ok: false, error: FAILED });
+      }
+    });
   });
 
+  timers.set(io, startLiveMap(io, liveMapMs));
   setLocalServer(io);
   return io;
 };
 
 /** Disconnects every socket and stops the server (graceful shutdown, tests). */
 export const closeRealtime = async (io) => {
+  clearInterval(timers.get(io));
   setLocalServer(null);
   await new Promise((resolve) => io.close(() => resolve()));
 };

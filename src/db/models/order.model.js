@@ -64,6 +64,7 @@ export default (sequelize, DataTypes) => {
       ratedVendor: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       ratedRider: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       paymentReference: { type: DataTypes.STRING(64), allowNull: false, unique: true },
+      dispatchAlertedAt: { type: DataTypes.DATE(3), allowNull: true },
     },
     { tableName: 'orders' },
   );

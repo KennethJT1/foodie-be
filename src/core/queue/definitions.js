@@ -8,7 +8,7 @@ export const QUEUES = {
     concurrency: 5,
     jobOptions: { attempts: 8, backoff: { type: 'exponential', delay: 30_000 } },
   },
-  // Order timers (accept deadline); rider offers join in phase 17
+  // Order timers: accept deadline, rider offers and dispatch retries
   dispatch: {
     concurrency: 10,
     jobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5_000 } },

@@ -4,6 +4,8 @@ import { authenticate, requirePermission, requireRole, validate } from '../../co
 import * as controller from './admin.controller.js';
 import { updateSettingsBody } from '../settings/settings.schemas.js';
 import { createAdminBody, idParams, updateAdminBody, updateRoleBody } from './admin.schemas.js';
+import * as dispatch from '../deliveries/deliveries.controller.js';
+import { reassignBody } from '../deliveries/deliveries.schemas.js';
 import * as orders from '../orders/orders.controller.js';
 import { customerStatusBody, reconcileBody } from '../orders/orders.schemas.js';
 import * as riders from '../riders/riders.controller.js';
@@ -106,6 +108,15 @@ router.post(
   validate({ params: idParams, body: resolveBody }),
   asyncHandler(social.resolveReport),
 );
+
+// Dispatch: manual reassignment before pickup and the live map
+router.post(
+  '/orders/:id/reassign',
+  requirePermission('orders.reassign'),
+  validate({ params: idParams, body: reassignBody }),
+  asyncHandler(dispatch.reassign),
+);
+router.get('/live-map', requirePermission('live_map.view'), asyncHandler(dispatch.liveMap));
 
 router.get('/customers', requirePermission('customers.view'), asyncHandler(orders.listCustomers));
 router.post(

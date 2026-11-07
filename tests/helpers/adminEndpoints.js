@@ -56,3 +56,9 @@ ADMIN_ENDPOINTS.push(
   ['GET', '/api/v1/admin/payments', 'payments.view'],
   ['POST', '/api/v1/admin/payments/pay_nobody/reconcile', 'payments.view'],
 );
+
+// Phase 17: dispatch
+ADMIN_ENDPOINTS.push(
+  ['POST', '/api/v1/admin/orders/ord_nobody/reassign', 'orders.reassign'],
+  ['GET', '/api/v1/admin/live-map', 'live_map.view'],
+);

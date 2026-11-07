@@ -6,3 +6,13 @@ export const numberGetter = (name) =>
     const value = this.getDataValue(name);
     return value == null ? null : Number(value);
   };
+
+/** Integer kobo in a BIGINT (mysql2 returns BIGINT as a string; read as a number). */
+export const koboColumn = (DataTypes, name) => ({
+  type: DataTypes.BIGINT,
+  allowNull: false,
+  defaultValue: 0,
+  get() {
+    return Number(this.getDataValue(name));
+  },
+});

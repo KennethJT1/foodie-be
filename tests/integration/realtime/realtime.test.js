@@ -12,7 +12,7 @@ import { attachRealtime, closeRealtime } from '../../../src/realtime/server.js';
 import { resetDatabase } from '../../helpers/db.js';
 import { bearer, createFoodItem, createPublicVendor, createUser } from '../../helpers/factories.js';
 
-const { Address } = models;
+const { Address, Rider } = models;
 
 let httpServer;
 let io;
@@ -21,7 +21,7 @@ const clients = [];
 
 beforeAll(async () => {
   httpServer = createServer(app);
-  io = attachRealtime(httpServer);
+  io = attachRealtime(httpServer, { liveMapMs: 500 });
   await new Promise((resolve) => httpServer.listen(0, resolve));
   url = `http://127.0.0.1:${httpServer.address().port}`;
 });
@@ -237,4 +237,120 @@ describe('Socket.IO', () => {
     });
   });
 
+  describe('riders and the live map (phase 17)', () => {
+    const createRider = async (rider = {}) => {
+      const user = await createUser({
+        role: 'rider',
+        rider: {
+          approvalStatus: 'approved',
+          vehicleType: 'motorcycle',
+          city: 'Lagos',
+          isOnline: true,
+          lat: 6.516,
+          lng: 3.38,
+          ...rider,
+        },
+      });
+      user.rider = await Rider.findOne({ where: { userId: user.id } });
+      return user;
+    };
+
+    /** A paid order taken to ready_for_pickup by the vendor (dispatch runs on ready). */
+    const readyOrder = async () => {
+      const order = await placeOrder();
+      for (const step of ['accept', 'preparing', 'ready']) await api('post', `/orders/${order.id}/${step}`, owner);
+      return order;
+    };
+
+    it('only the rider may join their room; job offers arrive there', async () => {
+      const tunde = await createRider();
+      const other = await createRider({ lat: 6.6, lng: 3.5 });
+      const socket = await connectAs(tunde);
+      expect(await ask(socket, 'rider:subscribe', { riderId: tunde.rider.id })).toEqual({ ok: true });
+      expect(await ask(await connectAs(other), 'rider:subscribe', { riderId: tunde.rider.id })).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_FOUND' },
+      });
+
+      const offered = listen(socket, 'rider:job:offer');
+      const order = await readyOrder();
+      expect(await offered.first()).toMatchObject({
+        orderId: order.id,
+        orderCode: order.code,
+        riderId: tunde.rider.id,
+        status: 'pending',
+      });
+    });
+
+    it('rider:location is stored and, during a delivery, forwarded to the order room with an ETA', async () => {
+      const tunde = await createRider();
+      const order = await readyOrder();
+      const [offer] = (await api('get', '/rider/offers', tunde)).body.data;
+      await api('post', `/deliveries/offers/${offer.id}/accept`, tunde);
+
+      const customer = await connectAs(ada);
+      await ask(customer, 'order:subscribe', { orderId: order.id });
+      const forwarded = listen(customer, 'rider:location');
+      const riderSocket = await connectAs(tunde);
+      const ack = await ask(riderSocket, 'rider:location', {
+        riderId: tunde.rider.id,
+        lat: 6.517,
+        lng: 3.381,
+        heading: 91.6,
+      });
+      expect(ack).toEqual({ ok: true });
+      expect(await forwarded.first()).toEqual({
+        orderId: order.id,
+        riderId: tunde.rider.id,
+        lat: 6.517,
+        lng: 3.381,
+        heading: 92,
+        etaMins: [expect.any(Number), expect.any(Number)],
+        at: expect.any(String),
+      });
+      expect(await Rider.findByPk(tunde.rider.id)).toMatchObject({ lat: 6.517, lng: 3.381 });
+      const route = (await models.Delivery.findOne({ where: { orderId: order.id } })).route;
+      expect(route).toEqual([{ lat: 6.517, lng: 3.381, at: expect.any(String) }]);
+
+      // Bad input, another rider's id and an offline rider are refused
+      expect(await ask(riderSocket, 'rider:location', { lat: 'x' })).toMatchObject({ ok: false });
+      const other = await createRider({ lat: 6.6, lng: 3.5 });
+      expect(await ask(riderSocket, 'rider:location', { riderId: other.rider.id, lat: 6.5, lng: 3.3 })).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_FOUND' },
+      });
+      const offline = await createRider({ isOnline: false });
+      expect(await ask(await connectAs(offline), 'rider:location', { lat: 6.5, lng: 3.3 })).toMatchObject({
+        ok: false,
+        error: { code: 'INVALID_STATUS' },
+      });
+    });
+
+    it('admin:live-map needs live_map.view; subscribers get a snapshot now and then every few seconds', async () => {
+      await createRider();
+      const support = await createUser({ role: 'admin', adminRole: 'support', phone: null });
+      expect(await ask(await connectAs(support), 'admin:live-map:subscribe')).toMatchObject({
+        ok: false,
+        error: { code: 'FORBIDDEN' },
+      });
+
+      const dispatcher = await createUser({ role: 'admin', adminRole: 'dispatch', phone: null });
+      const socket = await connectAs(dispatcher);
+      const maps = listen(socket, 'admin:live-map');
+      expect(await ask(socket, 'admin:live-map:subscribe')).toEqual({ ok: true });
+      expect(await maps.first()).toMatchObject({
+        riders: [expect.objectContaining({ city: 'Lagos' })],
+        deliveries: [],
+      });
+      // Then the periodic push
+      expect(await maps.nth(1)).toMatchObject({ at: expect.any(String) });
+
+      expect(await ask(socket, 'admin:live-map:unsubscribe')).toEqual({ ok: true });
+      // A push already being built may still land; after that, nothing
+      await sleep(2000);
+      const count = maps.events.length;
+      await sleep(2000);
+      expect(maps.events).toHaveLength(count);
+    });
+  });
 });

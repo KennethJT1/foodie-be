@@ -11,11 +11,13 @@ import { lockForUpdate, models, withTransaction } from '../../db/index.js';
 import { ACTIVE_ORDER_STATUSES } from '../../db/models/order.model.js';
 import { paystack, paystackMode } from '../../integrations/paystack/paystack.client.js';
 import { emitAfterCommit } from '../../realtime/emit.js';
+import { toPublicDeliveryDto } from '../deliveries/deliveries.presenter.js';
+import { dispatchOrder, queueDispatch } from '../deliveries/dispatch.service.js';
 import { rooms } from '../../realtime/rooms.js';
 import { notify } from '../notifications/notifications.service.js';
 import { toAddressDto } from '../vendors/vendors.presenter.js';
 
-const { FoodItem, Order, OrderItem, Payment, Rider, User, Vendor } = models;
+const { Delivery, FoodItem, Order, OrderItem, Payment, Rider, User, Vendor } = models;
 
 /** What the customer is told at each step (the frontend's ORDER_STATUS_META.customer). */
 const CUSTOMER_LINE = {
@@ -105,6 +107,7 @@ const DETAIL_INCLUDE = [
   },
   { model: Vendor, as: 'vendor', paranoid: false },
   { model: Payment, as: 'payment' },
+  { model: Delivery, as: 'delivery' },
 ];
 
 /** The order's rider as the detail (and `order:status`) shows it; null before one is assigned. */
@@ -122,7 +125,7 @@ const toOrderRiderDto = (r) =>
       }
     : null;
 
-/** The detail: order plus vendor, rider, delivery (phase 17), payment and refund (phase 19). */
+/** The detail: order plus vendor, rider, delivery, payment and refund (phase 19). */
 export const toOrderDetailDto = async (o, viewer) => {
   const v = o.vendor;
   const r = o.rider;
@@ -140,7 +143,7 @@ export const toOrderDetailDto = async (o, viewer) => {
       address: toAddressDto(v),
     },
     rider: toOrderRiderDto(r),
-    delivery: null,
+    delivery: toPublicDeliveryDto(o.delivery),
     payment: p && {
       reference: p.reference,
       channel: p.channel,
@@ -224,8 +227,11 @@ export const getOrder = async (user, id) => {
 
 // ── Status machine ───────────────────────────────────────────────────────────
 
-/** Moves the order on, appends { status, at, by, note? } and tells the customer. */
-export const transition = async (order, status, { by, note, transaction, fields = {} }) => {
+/**
+ * Moves the order on, appends { status, at, by, note? } and tells the customer (unless `silent`),
+ * then emits `order:status` after commit.
+ */
+export const transition = async (order, status, { by, note, transaction, fields = {}, silent = false }) => {
   const at = new Date();
   await order.update(
     {
@@ -235,16 +241,18 @@ export const transition = async (order, status, { by, note, transaction, fields 
     },
     { transaction },
   );
-  await notify(
-    order.customerId,
-    {
-      type: 'order',
-      title: CUSTOMER_LINE[status],
-      body: `Order KJT-${order.code}`,
-      link: `/account/orders/${order.id}`,
-    },
-    { transaction },
-  );
+  if (!silent) {
+    await notify(
+      order.customerId,
+      {
+        type: 'order',
+        title: CUSTOMER_LINE[status],
+        body: `Order KJT-${order.code}`,
+        link: `/account/orders/${order.id}`,
+      },
+      { transaction },
+    );
+  }
   emitAfterCommit(transaction, rooms.order(order.id), 'order:status', () => orderStatusPayload(order.id));
 };
 
@@ -260,16 +268,18 @@ export const orderStatusPayload = async (orderId) => {
         as: 'rider',
         include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'phone'] }],
       },
+      { model: Delivery, as: 'delivery' },
     ],
   });
   const rider = toOrderRiderDto(o.rider);
+  const delivery = toPublicDeliveryDto(o.delivery);
   return {
     orderId: o.id,
     status: o.status,
     statusHistory: o.statusHistory,
     updatedAt: iso(o.updatedAt),
     ...(rider && { rider }),
-    // delivery joins in phase 17
+    ...(delivery && { delivery }),
   };
 };
 
@@ -395,9 +405,15 @@ export const vendorMove = async (user, id, action) => {
       );
     }
     await transition(order, to, { by: 'vendor', transaction });
-    // Dispatch (phase 17) starts looking for a rider when the order is ready
   });
   if (action === 'accept') await cancelAutoReject(id);
+  // A ready order goes to the nearest free rider; if that fails, the dispatch job tries again
+  if (action === 'ready') {
+    await dispatchOrder(id).catch((err) => {
+      logger.error({ err, orderId: id }, 'Dispatch failed');
+      return queueDispatch(id, 0);
+    });
+  }
   return loadOrderDetail(id, user);
 };
 

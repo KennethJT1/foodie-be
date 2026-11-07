@@ -1,6 +1,6 @@
 # KJT Foodie — Backend Progress
 
-Last updated: 2026-11-07 · Current phase: **17** · Next up: **Phase 17 — Dispatch, deliveries, GPS, live map, chat** (deliveries / delivery_offers / chat_messages tables, then the dispatch queue; add `rider:subscribe` and `admin:live-map:subscribe` to `CAN_JOIN` in `src/realtime/server.js`)
+Last updated: 2026-11-07 · Current phase: **18** · Next up: **Phase 18 — Reviews, rider trips, earnings, payouts** (reviews and rider_payout_statements tables; `/rider/trips` and `/rider/earnings` read `deliveries`)
 
 ## How to use this file (read first in every new chat)
 
@@ -39,13 +39,13 @@ Status keys: ✅ done · 🟡 in progress · ⬜ not started · ⏸ deferred
 | 14 | Social, feed and moderation | 16 | 16/16 | ✅ |
 | 15 | Checkout, payments, orders, vendor sales | 18 | 18/18 | ✅ |
 | 16 | Real time (Socket.IO) | — | — | ✅ |
-| 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 0/11 | ⬜ |
+| 17 | Dispatch, deliveries, GPS, live map, chat | 11 | 11/11 | ✅ |
 | 18 | Reviews, rider trips, earnings, payouts | 9 | 0/9 | ⬜ |
 | 19 | Refunds | 9 | 0/9 | ⬜ |
 | 20 | Support tickets and admin inbox | 10 | 0/10 | ⬜ |
 | 21 | Admin overview and the full demo world | 1 | 0/1 | ⬜ |
 | 22 | Hardening and deployment | — | — | ⬜ |
-| | **Total** | **162** | **122/162** | |
+| | **Total** | **162** | **133/162** | |
 
 An endpoint counts as done only when it matches the contract, has integration tests, and is in Postman.
 
@@ -93,6 +93,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | Social and moderation | `src/modules/social/*`, tables `likes`, `follows`, `comments` (one level of vendor replies; `removed` / `hidden` flags), `reports` | `GET /feed` (cursor; nearby 1 km bands / popular score / newest / following, ranked in SQL), likes and follows (idempotent, counters in the same transaction), `/me/likes`, `/me/follows`, comments (500 chars; vendors reply on own dishes; edit / delete by the author), `POST /reports` (one open per person and target), `/vendor/engagement`, `/vendor/comments` (`answered` via EXISTS on vendor replies), `/admin/reports` list / resolve (settles every open report on the target; audited `comment.hidden|removed|report_dismissed`, `food_item.…`) |
 | Checkout and payments | `src/modules/checkout/*`, `payments` (type `order`) | `priceCart()` (server prices, options, fees, ETA, scheduling, 422 quote codes), `/checkout/quote`, `/payments/initialize` (Paystack split: subtotal → vendor subaccount, `transaction_charge` = delivery + processing fee; flag `no_split` without a subaccount), `/payments/verify` → `confirmOrderPayment()` (idempotent, row-locked, amount checked; also run by the webhook) creates the order, schedules `dispatch:order.autoReject`, audits `payment.received`; `/me/payments` |
 | Orders | `src/modules/orders/*`, tables `orders` (snapshots, fees, address JSON, delivery code, accept deadline, status history JSON), `order_items` | Scoped `/orders` and `/orders/{id}` (`orderScope()`; deliveryCode only for customer / admin), customer cancel (paid only, CANNOT_CANCEL), vendor accept / preparing / ready / reject (409 INVALID_STATUS), `transition()` appends history + notifies the customer, refunds (payment refunded; Paystack `/refund` after commit when live, `refund_failed` flag on error), accept deadline (delayed job + sweep on vendor reads), `/vendor/stats`, `/vendor/sales` (meta.summary), `/vendor/sales/daily` |
+| Dispatch and deliveries | `src/modules/deliveries/*`, tables `deliveries` (fee, `payout_pct` snapshot, `rider_earning`, pickup / dropoff JSON, route JSON), `delivery_offers`, `chat_messages`; `orders.dispatch_alerted_at` | `dispatchOrder()` offers a ready order to the nearest online, approved, free (not on a delivery, no live offer), active rider in the vendor's city who hasn't had it; rows locked so an order or rider is never doubled. Offers last `riderOfferTimeoutSec` (job `dispatch:offer.expire`; reads expire late ones too); decline / expiry / going offline → next rider; nobody → Dispatch admins (`orders.reassign`) notified once and `dispatch:order.dispatch` retried each minute. `findJobFor()` offers a freed rider (online, delivered, declined) the nearest waiting order. `/rider/status`, `/rider/offers`, accept (409 OFFER_GONE) / decline, `/rider/delivery`, pickup, complete (code → 422; earning = payoutPct% of fee; tripsCount +1). Socket: `rider:subscribe`, `rider:location` (own socket, online only; stores, appends to the route, refreshes the order ETA, forwards to `order:{id}`), `rider:job:offer`, `chat:message`, `admin:live-map:subscribe` (snapshot now, then every 5 s per instance via `io.local`). `/admin/orders/{id}/reassign` (audited), `/admin/live-map`, `/admin/riders?nearOrderId`, `isBusy` and `recentTrips` on admin riders; `delivery` on the order detail and `order:status` |
 | Admin customers and payments | `src/modules/payments/{adminPayments,settlement}.service.js` | `/admin/customers` (ordersCount) and status changes (audited), `/admin/payments` (split summary, flagged) and reconcile (audited); hourly `payments.settle` (settling → settled after 36 h) and `payments.reconcile` (`missing_webhook` when Paystack never confirmed) |
 | Postman | `docs/postman/kjt-foodie-api.postman_collection.json` | Health folder (`/api/v1/health`, `/health`, `/health/ready`); error-code table updated |
 | Tests, lint, CI | `tests/`, `jest.config.js`, `eslint.config.js`, `.prettierrc.json`, `.github/workflows/ci.yml` | Jest + Supertest (337 tests), ESLint 10 flat config + Prettier, CI workflow (not run yet) |
@@ -350,25 +351,25 @@ An endpoint counts as done only when it matches the contract, has integration te
 - [x] `vendor:subscribe` / `vendor:unsubscribe` → `vendor:order:new`
 - [x] `notification:new` (optional)
 
-### Phase 17 — Dispatch, deliveries, GPS, live map, chat ⬜
+### Phase 17 — Dispatch, deliveries, GPS, live map, chat ✅
 
-- [ ] Tables: deliveries, delivery_offers, chat_messages
-- [ ] Dispatch queue (nearest rider, 30 s offers, next rider, alert dispatch)
-- [ ] Socket: `rider:subscribe`, `rider:location` (in/out), `rider:job:offer`, `chat:message`, `admin:live-map`
-- [ ] `GET /admin/riders` extended with `nearOrderId`
-- [ ] Seed: deliveries, Ada's live route, Tunde's trips
+- [x] Tables: deliveries, delivery_offers, chat_messages
+- [x] Dispatch queue (nearest rider, 30 s offers, next rider, alert dispatch)
+- [x] Socket: `rider:subscribe`, `rider:location` (in/out), `rider:job:offer`, `chat:message`, `admin:live-map`
+- [x] `GET /admin/riders` extended with `nearOrderId`
+- [x] Seed: deliveries, Ada's live route, Tunde's trips
 - Endpoints:
-  - [ ] `POST /rider/status`
-  - [ ] `GET /rider/offers`
-  - [ ] `POST /deliveries/offers/{id}/accept`
-  - [ ] `POST /deliveries/offers/{id}/decline`
-  - [ ] `GET /rider/delivery`
-  - [ ] `POST /deliveries/{id}/pickup`
-  - [ ] `POST /deliveries/{id}/complete`
-  - [ ] `POST /admin/orders/{id}/reassign`
-  - [ ] `GET /admin/live-map`
-  - [ ] `GET /orders/{id}/chat`
-  - [ ] `POST /orders/{id}/chat`
+  - [x] `POST /rider/status`
+  - [x] `GET /rider/offers`
+  - [x] `POST /deliveries/offers/{id}/accept`
+  - [x] `POST /deliveries/offers/{id}/decline`
+  - [x] `GET /rider/delivery`
+  - [x] `POST /deliveries/{id}/pickup`
+  - [x] `POST /deliveries/{id}/complete`
+  - [x] `POST /admin/orders/{id}/reassign`
+  - [x] `GET /admin/live-map`
+  - [x] `GET /orders/{id}/chat`
+  - [x] `POST /orders/{id}/chat`
 
 ### Phase 18 — Reviews, rider trips, earnings, payouts ⬜
 
@@ -529,6 +530,12 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-07 | Sockets are not disconnected when the access token expires; the token is checked on connect and the room checks on every subscribe | socket.io-client doesn't reconnect after a server-side disconnect, so the order page would silently stop updating |
 | 2026-11-07 | Events are emitted after commit and are best effort (a Redis failure is logged, never raised); `order:status` is read fresh after commit | REST stays the source of truth; nothing is pushed for a rolled-back change |
 | 2026-11-07 | Phase 16 has no REST endpoints, so Postman is unchanged; socket behaviour is covered by `tests/integration/realtime/realtime.test.js` | Nothing to add to the collection |
+| 2026-11-07 | Dispatch is server-driven (offers pushed to the nearest free rider), not the mock's rider-pull demo simulation; riders who come free also get the nearest waiting order | Build plan / handoff dispatch rule; the mock only simulates it in the browser |
+| 2026-11-07 | Delivery, reassignment and chat notifications use type `order` (the mock sends `delivery` / `chat`) | Contract notification enum |
+| 2026-11-07 | Reassigning an order that already had a rider adds a history entry (`by: admin`, note "Reassigned to …") and emits `order:status`, but doesn't notify the customer again | Same as the mock: the customer already knows a rider is coming |
+| 2026-11-07 | `rider:location` is acknowledged (`{ ok }` / `{ ok: false, error }`) like the subscribe events; positions sent with another rider's id or while offline are refused | The handoff says only "accepted while online" |
+| 2026-11-07 | Route points are capped at the last 2000 per delivery | Keeps the JSON column bounded (about 4.5 h at one point every 8 s) |
+| 2026-11-07 | Pickup / complete in the wrong state → 409 `INVALID_STATUS` (the contract gives no code) | The handoff's generic status code |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 
@@ -550,6 +557,7 @@ Add: date, endpoint, what the handoff/contract says, what is unclear or wrong.
 
 | Date | Phase | What was done |
 | --- | --- | --- |
+| 2026-11-07 | 17 | Dispatch and deliveries (11 endpoints): rider status, offers with 30 s expiry and next-rider hand-off, accept / decline, active delivery, pickup, complete with the code; customer–rider chat; admin reassign and live map; `nearOrderId`, `isBusy`, `recentTrips` on admin riders. Tables deliveries, delivery_offers, chat_messages. Socket `rider:subscribe`, `rider:location`, `rider:job:offer`, `chat:message`, `admin:live-map`. `deliveries` seed step (a delivery per ridden order, routes, live riders online). Postman "Dispatch, deliveries and chat" and "Admin · Dispatch" folders; dispatch endpoints in the permission matrix. |
 | 2026-11-07 | 16 | Socket.IO on the API server with the Redis adapter, JWT check on connect, `user:` / `order:` / `vendor:` rooms with join checks; `order:status` from every committed transition, `vendor:order:new` on a paid order, `notification:new` on every new in-app row; worker / scheduler emit through `@socket.io/redis-emitter`; realtime integration tests. Also: model associations moved into `src/db/models/association.js`. |
 | 2026-11-05 | 15 (follow-up) | IDs switched to UUIDs: `CHAR(36)` keys in every migration and model, seed fixed IDs via `seedId()` / `SEED_IDS`, tests and Postman examples updated; dev and test DBs rebuilt and dev reseeded. |
 | 2026-11-05 | 15 | Checkout quote, payments initialize / verify (order created on payment, idempotent, also via webhook), `/me/payments`, scoped orders, customer cancel, vendor accept / preparing / ready / reject with refunds, accept deadline job, vendor stats / sales / daily, admin customers and payments with reconcile (18 endpoints); orders and order_items; dispatch queue; settlement and reconciliation schedules; `orders` seed step; Postman "Checkout and orders" and "Admin · Customers and payments" folders; customer / payment endpoints in the permission matrix. Dev DB migrated and reseeded. |

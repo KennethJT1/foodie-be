@@ -15,6 +15,7 @@ import uploadRoutes from './modules/uploads/uploads.routes.js';
 import webhookRoutes from './modules/payments/webhook.routes.js';
 import orderRoutes, { checkoutRoutes, mePaymentRoutes, paymentRoutes } from './modules/orders/orders.routes.js';
 import riderRoutes from './modules/riders/riders.routes.js';
+import deliveryRoutes, { chatRoutes } from './modules/deliveries/deliveries.routes.js';
 import {
   commentRoutes,
   feedRoutes,
@@ -52,7 +53,9 @@ router.use('/vendors', publicVendorRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/checkout', checkoutRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/orders', chatRoutes);
 router.use('/orders', orderRoutes);
+router.use('/deliveries', deliveryRoutes);
 router.use('/vendor', vendorRoutes);
 router.use('/rider', riderRoutes);
 router.use('/admin', adminRoutes);

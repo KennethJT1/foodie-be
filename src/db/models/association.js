@@ -9,7 +9,10 @@ export const defineAssociations = (models) => {
     AdminRolePermission,
     BankChangeRequest,
     Category,
+    ChatMessage,
     Comment,
+    Delivery,
+    DeliveryOffer,
     Follow,
     FoodItem,
     Like,
@@ -121,4 +124,18 @@ export const defineAssociations = (models) => {
   Payment.belongsTo(Vendor, { as: 'vendor', foreignKey: 'vendorId' });
   Payment.belongsTo(User, { as: 'user', foreignKey: 'userId' });
   Payment.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+
+  // Dispatch, deliveries and chat
+  Order.hasOne(Delivery, { as: 'delivery', foreignKey: 'orderId' });
+  Order.hasMany(DeliveryOffer, { as: 'offers', foreignKey: 'orderId' });
+  Order.hasMany(ChatMessage, { as: 'chatMessages', foreignKey: 'orderId' });
+  Rider.hasMany(Delivery, { as: 'deliveries', foreignKey: 'riderId' });
+  Rider.hasMany(DeliveryOffer, { as: 'offers', foreignKey: 'riderId' });
+
+  Delivery.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+  Delivery.belongsTo(Rider, { as: 'rider', foreignKey: 'riderId' });
+  DeliveryOffer.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+  DeliveryOffer.belongsTo(Rider, { as: 'rider', foreignKey: 'riderId' });
+  ChatMessage.belongsTo(Order, { as: 'order', foreignKey: 'orderId' });
+  ChatMessage.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 };
