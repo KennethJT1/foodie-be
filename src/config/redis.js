@@ -8,10 +8,13 @@ export const redisPrefix = env.REDIS_KEY_PREFIX ?? `kjt:${env.NODE_ENV}`;
 const connections = new Set();
 
 // A managed Redis may drop a connection without the client noticing; a command sent on it would
-// then wait until the OS gives up on the socket (minutes). Keepalive probes find dead sockets, and
-// non-worker commands give up after COMMAND_TIMEOUT_MS so a Redis problem can't hang a request.
+// then wait until the OS gives up on the socket (minutes). Keepalive probes find dead sockets; on
+// non-worker connections a command with no reply in SOCKET_TIMEOUT_MS destroys the socket (ioredis
+// reconnects and retries), and a command still unanswered after COMMAND_TIMEOUT_MS fails, so a
+// Redis problem can't hang a request. Workers wait in blocking commands, so they get neither.
 const KEEPALIVE_MS = 10_000;
-const COMMAND_TIMEOUT_MS = 10_000;
+const SOCKET_TIMEOUT_MS = 8_000;
+const COMMAND_TIMEOUT_MS = 20_000;
 const QUIT_TIMEOUT_MS = 3_000;
 
 /**
@@ -26,7 +29,7 @@ export const createRedis = ({ name = 'app', forWorker = false } = {}) => {
     maxRetriesPerRequest: forWorker ? null : 2,
     enableOfflineQueue: true,
     keepAlive: KEEPALIVE_MS,
-    ...(!forWorker && { commandTimeout: COMMAND_TIMEOUT_MS }),
+    ...(!forWorker && { socketTimeout: SOCKET_TIMEOUT_MS, commandTimeout: COMMAND_TIMEOUT_MS }),
   });
   client.on('error', (err) => logger.warn({ err: err.message, connection: name }, 'Redis error'));
   connections.add(client);

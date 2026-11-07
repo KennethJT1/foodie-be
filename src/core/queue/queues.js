@@ -37,7 +37,24 @@ export const jobId = (...parts) => parts.join('-');
  * Adds a job. Jobs carry IDs and small values only; processors reload fresh data.
  * Pass `jobId` for anything that must not run twice (BullMQ ignores a duplicate id).
  */
-export const addJob = (queueName, jobName, data, options) => getQueue(queueName).add(jobName, data, options);
+export const addJob = (queueName, jobName, data, options) =>
+  withTimeout(getQueue(queueName).add(jobName, data, options), `add ${queueName}:${jobName}`);
+
+// BullMQ waits for its connection to be ready with no limit; callers (checkout, dispatch) must not
+// hang on a Redis outage, so producer calls give up after this long
+const PRODUCER_TIMEOUT_MS = 15_000;
+
+/** Rejects if `promise` takes longer than PRODUCER_TIMEOUT_MS. */
+export const withTimeout = (promise, what) => {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((resolve, reject) => {
+      timer = setTimeout(() => reject(new Error(`Redis queue call timed out: ${what}`)), PRODUCER_TIMEOUT_MS);
+      timer.unref();
+    }),
+  ]).finally(() => clearTimeout(timer));
+};
 
 export const closeQueues = async () => {
   await Promise.all([...queues.values()].map((queue) => queue.close()));

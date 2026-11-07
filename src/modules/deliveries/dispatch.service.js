@@ -6,7 +6,7 @@
 import { Op, literal } from 'sequelize';
 import { logger } from '../../config/logger.js';
 import { adminsWithPermission } from '../../core/auth/index.js';
-import { addJob, getQueue, jobId } from '../../core/queue/index.js';
+import { addJob, getQueue, jobId, withTimeout } from '../../core/queue/index.js';
 import { distanceSql, haversineM } from '../../core/utils/index.js';
 import { models, withTransaction } from '../../db/index.js';
 import { emitTo } from '../../realtime/emit.js';
@@ -47,9 +47,7 @@ const scheduleExpiry = (offer) =>
   ).catch((err) => logger.error({ err, offerId: offer.id }, 'Could not schedule offer expiry; reads expire it'));
 
 export const cancelExpiry = (offerId) =>
-  getQueue('dispatch')
-    .remove(jobId('offerExpire', offerId))
-    .catch(() => {});
+  withTimeout(getQueue('dispatch').remove(jobId('offerExpire', offerId)), 'remove offer expiry').catch(() => {});
 
 /** Queues `dispatchOrder` (job `dispatch:order.dispatch`); at most one per order per minute. */
 export const queueDispatch = (orderId, delay = RETRY_MS) =>

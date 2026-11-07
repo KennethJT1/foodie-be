@@ -553,6 +553,7 @@ An endpoint counts as done only when it matches the contract, has integration te
 | 2026-11-07 | `emitAfterCommit` starts the socket send without awaiting it | Sequelize awaits afterCommit hooks before the transaction resolves, so the fresh `order:status` read was adding a round trip to every order step |
 | 2026-11-07 | The seeder's `activity` step writes the demo users' notifications and 60 audit entries directly; the other steps insert rows without running the flows, so nothing else creates them | Handoff 8.4 wants a lived-in bell and audit log |
 | 2026-11-07 | Overview `deliveryFeeRevenue` counts delivered orders created this Lagos month (the mock uses the UTC month) | Every other date bucket is a Lagos day |
+| 2026-11-07 | Redis connections: TCP keepalive; non-worker connections also `socketTimeout` 8 s (a command with no reply destroys the socket so ioredis reconnects and retries) and `commandTimeout` 20 s; queue producer calls (`addJob`, job removal) give up after 15 s | The managed Redis drops connections silently; requests, test resets and shutdown hung on dead sockets for minutes |
 | 2026-11-04 | Wrong status for an admin decision → 409 `INVALID_STATUS` with the mock's message; unknown bank-change decision → 400 | Contract says 409 without a code; INVALID_STATUS is the handoff's generic one |
 | 2026-10-28 | No Docker anywhere: MySQL and Redis run locally / managed; tests use a local `kjt_foodie_test` DB; CI uses GitHub Actions `services`; production runs Node processes with PM2 | Project owner's decision |
 

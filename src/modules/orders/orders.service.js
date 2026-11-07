@@ -6,7 +6,7 @@ import { logger } from '../../config/logger.js';
 import { permissionsFor } from '../../core/auth/index.js';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../core/errors/index.js';
 import { buildListQuery, paginate } from '../../core/query/index.js';
-import { addJob, getQueue, jobId } from '../../core/queue/index.js';
+import { addJob, getQueue, jobId, withTimeout } from '../../core/queue/index.js';
 import { lockForUpdate, models, withTransaction } from '../../db/index.js';
 import { ACTIVE_ORDER_STATUSES } from '../../db/models/order.model.js';
 import { paystack, paystackMode } from '../../integrations/paystack/paystack.client.js';
@@ -343,9 +343,7 @@ export const scheduleAutoReject = (order) =>
   );
 
 const cancelAutoReject = (orderId) =>
-  getQueue('dispatch')
-    .remove(jobId('autoReject', orderId))
-    .catch(() => {});
+  withTimeout(getQueue('dispatch').remove(jobId('autoReject', orderId)), 'remove auto-reject').catch(() => {});
 
 /** POST /orders/{id}/cancel: customers, only while paid (409 CANNOT_CANCEL); full refund. */
 export const cancelOrder = async (user, id, { reason } = {}) => {
