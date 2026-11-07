@@ -5,6 +5,9 @@ export default {
   // checkout → dispatch → delivery flows make dozens of round trips per test. A test that runs out
   // of time leaves its queries running, which then also times out the shared afterAll.
   testTimeout: 180_000,
+  // One worker keeps files serial (they share one test database); it is restarted when it grows past
+  // this, because each ESM test file leaves memory behind and a long run otherwise hits the heap limit
+  workerIdleMemoryLimit: '1GB',
   transform: {},
   roots: ['<rootDir>/tests'],
   globalSetup: '<rootDir>/tests/setup/globalSetup.js',

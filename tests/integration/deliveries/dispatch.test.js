@@ -208,7 +208,12 @@ describe('dispatch', () => {
     expect(await offersOf(busy)).toEqual([]);
     expect((await offersOf(free))[0].orderId).toBe(order.id);
 
-    // A second ready order waits rather than doubling up on the free rider
+    // A second ready order waits rather than doubling up on the free rider. The first offer is kept
+    // open: a slow checkout against the remote test database can take longer than its 30 s.
+    await DeliveryOffer.update(
+      { expiresAt: new Date(Date.now() + 10 * 60_000) },
+      { where: { riderId: free.rider.id, status: 'pending' } },
+    );
     await placeOrder();
     expect(await offersOf(free)).toHaveLength(1);
   });
