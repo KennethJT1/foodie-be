@@ -938,7 +938,14 @@ paths:
                 reason: { type: string }
                 details: { type: string, maxLength: 500 }
                 amount: { type: integer, description: kobo, at most the order subtotal }
-                photos: { type: array, maxItems: 3, items: { type: string, description: URL or data URI } }
+                photos:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: string
+                    description: >-
+                      The `url` returned by POST /uploads with purpose `refund_photo`, uploaded by this
+                      customer. Other URLs and data URIs are rejected with 422 (`photos.<index>`).
       responses:
         '201':
           description: Created
