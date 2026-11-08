@@ -38,6 +38,9 @@ jobs:
       CLOUDINARY_CLOUD_NAME: ci
       CLOUDINARY_API_KEY: ci
       CLOUDINARY_API_SECRET: ci
+      # Test-only signing keys; real ones live in .env / the host's secrets
+      JWT_ACCESS_SECRET: ci-access-secret-not-used-anywhere-real
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-used-anywhere-real
 
     steps:
       - uses: actions/checkout@v4
