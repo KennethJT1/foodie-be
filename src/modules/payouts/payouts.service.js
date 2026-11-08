@@ -44,7 +44,8 @@ const ownRider = async (user) => {
 // ── Rider: trips and earnings ────────────────────────────────────────────────
 
 const escapeLike = (text) => text.replace(/[\\%_]/g, (c) => `\\${c}`);
-const dropoffArea = literal("JSON_UNQUOTE(JSON_EXTRACT(`order`.`address`, '$.area'))");
+// JSON text has a binary collation on MySQL; LOWER on both sides keeps the search case-insensitive
+const dropoffArea = literal("LOWER(JSON_UNQUOTE(JSON_EXTRACT(`order`.`address`, '$.area')))");
 
 // GET /rider/trips (handoff section 3): search order code, vendor, drop-off area; newest first
 const TRIPS = {
@@ -68,7 +69,7 @@ export const listTrips = async (user, query) => {
           [Op.or]: [
             { '$order.code$': { [Op.like]: pattern } },
             { '$order.vendor_name$': { [Op.like]: pattern } },
-            where(dropoffArea, Op.like, pattern),
+            where(dropoffArea, Op.like, pattern.toLowerCase()),
           ],
         },
       ],

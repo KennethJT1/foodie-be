@@ -326,9 +326,10 @@ export const feed = async (user, query) => {
     const follows = user ? await Follow.findAll({ where: { userId: user.id }, attributes: ['vendorId'] }) : [];
     where.vendorId = { [Op.in]: follows.map((f) => f.vendorId) };
   }
+  // Generated ids are UUID v7 (time-ordered), so id DESC keeps same-moment dishes newest first
   const newest = [
     ['createdAt', 'DESC'],
-    ['id', 'ASC'],
+    ['id', 'DESC'],
   ];
   const order = {
     nearby: [[literal(`FLOOR(${distanceSql('`vendor`.`lat`', '`vendor`.`lng`', origin)} / 1000)`), 'ASC'], ...newest],
