@@ -52,7 +52,7 @@ describe('GET /banks', () => {
     ]);
     await request(app).get('/api/v1/banks').expect(200);
     expect(calls).toBe(1);
-    expect(await models.Bank.findByPk('058')).toMatchObject({ isActive: false });
+    expect(await models.Bank.findOne({ where: { code: '058' } })).toMatchObject({ isActive: false });
 
     await redis.del(`${redisPrefix}:banks:fresh`);
     paystack.listBanks = async () => {

@@ -85,7 +85,11 @@ export const updateSettings = async (actor, patch, req) => {
 
   await withTransaction(async (transaction) => {
     for (const key of changed.filter((k) => k in DEFAULT_SETTINGS)) {
-      await Setting.upsert({ key, value: patch[key] }, { transaction });
+      // On the unique key; upsert() would also overwrite the row's id
+      await Setting.bulkCreate([{ key, value: patch[key] }], {
+        updateOnDuplicate: ['value', 'updatedAt'],
+        transaction,
+      });
     }
     if (changed.includes('serviceAreas')) await saveServiceAreas(patch.serviceAreas, transaction);
     if (changed.includes('notificationTemplates')) {

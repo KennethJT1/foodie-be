@@ -71,15 +71,18 @@ export const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
 const ROLE_CACHE_TTL_SEC = 600;
 const cacheKey = (roleId) => `${redisPrefix}:perm:role:${roleId}`;
 
-/** A role's live permissions: Redis first, then the database. super_admin always has all. */
+/** A role's live permissions (by slug): Redis first, then the database. super_admin always has all. */
 export const rolePermissions = async (roleId) => {
   if (roleId === 'super_admin') return [...PERMISSIONS];
   const cached = await redis.get(cacheKey(roleId)).catch(() => null);
   if (cached) return JSON.parse(cached);
 
-  const rows = await models.AdminRolePermission.findAll({ where: { roleId }, attributes: ['permissionId'] });
+  const role = await models.AdminRole.findOne({
+    where: { slug: roleId },
+    include: [{ model: models.Permission, as: 'permissions', attributes: ['key'], through: { attributes: [] } }],
+  });
   // Keep the canonical order so the UI lists them consistently
-  const granted = new Set(rows.map((row) => row.permissionId));
+  const granted = new Set((role?.permissions ?? []).map((p) => p.key));
   const permissions = PERMISSIONS.filter((p) => granted.has(p));
   await redis.set(cacheKey(roleId), JSON.stringify(permissions), 'EX', ROLE_CACHE_TTL_SEC).catch(() => {});
   return permissions;
@@ -92,6 +95,10 @@ export const invalidateRolePermissions = (roleIds) => redis.del(...[roleIds].fla
 export const permissionsFor = async (user) =>
   user?.role === 'admin' && user.adminRole ? rolePermissions(user.adminRole) : [];
 
+/** Map of permission key (dashboard.view) → permissions.id. */
+export const permissionIdsByKey = async ({ transaction } = {}) =>
+  new Map((await models.Permission.findAll({ attributes: ['id', 'key'], transaction })).map((p) => [p.key, p.id]));
+
 /**
  * Makes sure the five roles, every permission and the default sets exist. The migration inserts
  * them; seed wipes and test resets empty the tables, so the seeder and test factories call this.
@@ -100,20 +107,23 @@ export const permissionsFor = async (user) =>
 export const ensureAdminRoles = async ({ transaction } = {}) => {
   const { AdminRole, Permission, AdminRolePermission } = models;
   await Permission.bulkCreate(
-    PERMISSIONS.map((id) => ({ id })),
+    PERMISSIONS.map((key) => ({ key })),
     { ignoreDuplicates: true, transaction },
   );
 
-  const existing = new Set((await AdminRole.findAll({ attributes: ['id'], transaction })).map((r) => r.id));
-  const missing = ADMIN_ROLES.filter((id) => !existing.has(id));
+  const existing = new Set((await AdminRole.findAll({ attributes: ['slug'], transaction })).map((r) => r.slug));
+  const missing = ADMIN_ROLES.filter((slug) => !existing.has(slug));
   if (!missing.length) return;
 
-  await AdminRole.bulkCreate(
-    missing.map((id) => ({ id, name: ROLE_NAMES[id], isLocked: id === 'super_admin' })),
+  const created = await AdminRole.bulkCreate(
+    missing.map((slug) => ({ slug, name: ROLE_NAMES[slug], isLocked: slug === 'super_admin' })),
     { transaction },
   );
+  const permissionIds = await permissionIdsByKey({ transaction });
   await AdminRolePermission.bulkCreate(
-    missing.flatMap((roleId) => DEFAULT_ROLE_PERMISSIONS[roleId].map((permissionId) => ({ roleId, permissionId }))),
+    created.flatMap((role) =>
+      DEFAULT_ROLE_PERMISSIONS[role.slug].map((key) => ({ roleId: role.id, permissionId: permissionIds.get(key) })),
+    ),
     { transaction },
   );
   await invalidateRolePermissions(missing);

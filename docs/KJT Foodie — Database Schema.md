@@ -45,7 +45,7 @@ One `users` table holds every person; their role decides which profile table (ve
 | `phone` | VARCHAR(20) | Unique, E.164 (`+2348031234567`) |
 | `password_hash` | VARCHAR(255) NULL | Null for OTP-only accounts |
 | `role` | ENUM('customer','vendor','vendor\_staff','rider','admin') |  |
-| `admin_role_id` | FK → `roles` NULL | Only for admins |
+| `admin_role` | VARCHAR(32) FK → `admin_roles.slug` NULL | Only for admins |
 | `status` | ENUM('active','suspended','banned','pending') |  |
 | `avatar_url` | VARCHAR(500) NULL |  |
 | `email_verified_at`, `phone_verified_at` | DATETIME NULL |  |

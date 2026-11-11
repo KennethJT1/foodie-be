@@ -1,10 +1,13 @@
+import { idColumn } from '../id.js';
+
 export const TEMPLATE_CHANNELS = ['email', 'sms', 'inapp'];
 
 export default (sequelize, DataTypes) =>
   sequelize.define(
     'NotificationTemplate',
     {
-      key: { type: DataTypes.STRING(64), primaryKey: true },
+      id: idColumn(),
+      key: { type: DataTypes.STRING(64), allowNull: false, unique: true },
       channel: { type: DataTypes.ENUM(...TEMPLATE_CHANNELS), allowNull: false },
       subject: { type: DataTypes.STRING(120), allowNull: false, defaultValue: '' },
       body: { type: DataTypes.STRING(1000), allowNull: false },

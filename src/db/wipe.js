@@ -5,7 +5,7 @@ const KEEP = ['sequelize_meta', 'sequelize_seeds'];
  * Empties every table in the connected database (schema stays). Used by `npm run seed`
  * and by the test reset helper. Foreign key checks are off on the same connection only.
  * DELETE rather than TRUNCATE: TRUNCATE is DDL (slow on TiDB, implicit commit on MySQL) and
- * buys nothing here, since IDs are strings and demo tables are small.
+ * buys nothing here, since IDs are UUIDs (no auto-increment to reset) and demo tables are small.
  */
 export const truncateAllTables = async (sequelize) => {
   const [rows] = await sequelize.query(
