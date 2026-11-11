@@ -369,6 +369,70 @@ paths:
         '204': { description: Deleted; the refresh cookie is cleared }
         '403': { description: Only customers can delete their own account here }
 
+  /me/phone/otp:
+    post:
+      tags: [Auth]
+      summary: Change or add a phone number, step 1 - sends a 6-digit code to the new number
+      description: >-
+        The number is not saved yet. The code only works for this account and this number.
+        Rate limited to 5 per minute.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, example: '0809 111 2233' }
+      responses:
+        '200':
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          otpRequestId: { type: string }
+                          phone: { type: string, example: '+2348091112233' }
+                          expiresInSec: { type: integer, example: 300 }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409': { description: The number belongs to another account (fieldErrors.phone) }
+        '422': { description: Invalid number, or it is already yours (fieldErrors.phone) }
+
+  /me/phone/verify:
+    post:
+      tags: [Auth]
+      summary: Change or add a phone number, step 2 - checks the code and saves the number as verified
+      description: The old number (if any) gets an SMS saying the number was changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: { type: string }
+                code: { type: string, example: '123456' }
+      responses:
+        '200':
+          description: The updated user (phoneVerified true)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409': { description: The number was taken by another account in the meantime }
+        '422': { description: Wrong or expired code (fieldErrors.code) }
+
   /categories:
     get:
       tags: [Catalogue]

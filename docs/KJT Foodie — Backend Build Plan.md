@@ -225,6 +225,8 @@ Tables: `users`, `refresh_tokens` (hashed, rotated, family id for reuse detectio
 | `POST` | `/auth/password/reset` | Public | code + new password |
 | `GET` | `/me` | Signed in | fresh `permissions`, `vendor {…}`, `rider {…}` |
 | `PATCH` | `/me` | Signed in | edit profile |
+| `POST` | `/me/phone/otp` | Signed in | code to a new phone number (not saved yet) |
+| `POST` | `/me/phone/verify` | Signed in | check the code, save the number as verified |
 | `DELETE` | `/me` | Customer | anonymise personal data, keep orders |
 | `GET` | `/addresses` | Customer | default first |
 | `POST` | `/addresses` | Customer | first one becomes default |

@@ -7,7 +7,7 @@ import { models } from '../../db/index.js';
 
 const { OtpCode } = models;
 
-export const OTP_TTL_SEC = { login: 300, verify: 300, reset: 600 };
+export const OTP_TTL_SEC = { login: 300, verify: 300, reset: 600, phone_change: 300 };
 const MAX_ATTEMPTS = 5;
 
 // Real random codes only in production; elsewhere every code is the demo OTP (123456)

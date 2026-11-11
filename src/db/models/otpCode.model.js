@@ -1,6 +1,6 @@
 import { idColumn } from '../id.js';
 
-export const OTP_PURPOSES = ['login', 'verify', 'reset'];
+export const OTP_PURPOSES = ['login', 'verify', 'reset', 'phone_change'];
 
 export default (sequelize, DataTypes) =>
   sequelize.define(

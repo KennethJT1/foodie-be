@@ -10,3 +10,12 @@ export const updateMeBody = z.object({
   // A URL returned by POST /uploads (phase 8)
   avatar: z.union([z.url({ protocol: /^https$/, error: 'Upload the photo again' }).max(500), z.null()]).optional(),
 });
+
+const phone = z.string({ error: 'Enter your new phone number' }).trim().min(1, 'Enter your new phone number');
+
+export const phoneOtpBody = z.object({ phone });
+
+export const phoneVerifyBody = z.object({
+  phone,
+  code: z.string({ error: 'Enter the 6-digit code' }).regex(/^\d{6}$/, 'Enter the 6-digit code'),
+});
