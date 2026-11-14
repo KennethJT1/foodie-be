@@ -37,8 +37,21 @@ describe('cursor', () => {
   });
 
   it('nextCursor is the next offset, null at the end', () => {
-    expect(cursorMeta({ offset: 0, limit: 10, total: 134 })).toEqual({ nextCursor: '10', limit: 10, total: 134 });
+    expect(cursorMeta({ offset: 0, limit: 10, total: 134 })).toMatchObject({ nextCursor: '10', limit: 10, total: 134 });
     expect(cursorMeta({ offset: 130, limit: 10, total: 134 }).nextCursor).toBeNull();
     expect(cursorMeta({ offset: 0, limit: 10, total: 10 }).nextCursor).toBeNull();
+  });
+
+  it('accepts page instead of cursor and reports page / totalPages', () => {
+    expect(parseCursor({ page: '3', limit: '12' })).toEqual({ offset: 24, limit: 12 });
+    expect(parseCursor({ page: 'x' })).toEqual({ offset: 0, limit: 10 });
+    expect(parseCursor({ page: '3', cursor: '5' }).offset).toBe(5);
+    expect(cursorMeta({ offset: 24, limit: 12, total: 30 })).toMatchObject({
+      page: 3,
+      totalPages: 3,
+      hasNextPage: false,
+      hasPrevPage: true,
+    });
+    expect(cursorMeta({ offset: 0, limit: 12, total: 0 })).toMatchObject({ page: 1, totalPages: 1 });
   });
 });

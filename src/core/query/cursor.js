@@ -5,18 +5,32 @@ import { parsePaging } from './buildListQuery.js';
 export const FEED_DEFAULT_LIMIT = 10;
 export const FEED_MAX_LIMIT = 50;
 
-/** `cursor` + `limit` → `{ offset, limit }`; a bad cursor starts from the top. */
+/**
+ * `cursor` + `limit` → `{ offset, limit }`; a bad cursor starts from the top. Without a cursor,
+ * `page` (1-based) picks the offset, so the same list can be shown with numbered pages.
+ */
 export const parseCursor = (query, { defaultLimit = FEED_DEFAULT_LIMIT, maxLimit = FEED_MAX_LIMIT } = {}) => {
+  const { page, limit } = parsePaging(query, { defaultLimit, maxLimit });
   const raw = typeof query?.cursor === 'string' ? query.cursor : '';
+  if (raw === '' && query?.page !== undefined) return { offset: (page - 1) * limit, limit };
   const offset = /^\d+$/.test(raw) ? Number(raw) : 0;
-  return { offset, limit: parsePaging(query, { defaultLimit, maxLimit }).limit };
+  return { offset, limit };
 };
 
-export const cursorMeta = ({ offset, limit, total }) => ({
-  nextCursor: offset + limit < total ? String(offset + limit) : null,
-  limit,
-  total,
-});
+/** `nextCursor` for infinite lists; `page` / `totalPages` for numbered pagination. */
+export const cursorMeta = ({ offset, limit, total }) => {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const page = Math.floor(offset / limit) + 1;
+  return {
+    nextCursor: offset + limit < total ? String(offset + limit) : null,
+    limit,
+    total,
+    page,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  };
+};
 
 /**
  * Runs a cursor list over a model. `findOptions` holds where / order / include (from
