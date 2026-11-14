@@ -8,13 +8,29 @@ import { phoneOtpBody, phoneVerifyBody, updateMeBody } from './users.schemas.js'
 // Mounted at /me
 const router = Router();
 
+// Among admins only the super admin manages their own account details; other admins' details are
+// set by a super admin (Admin users). GET /me stays open: every session needs it.
+const canEditOwnAccount = (req, res, next) =>
+  next(
+    req.user.role === 'admin' && req.user.adminRole !== 'super_admin'
+      ? new ForbiddenError('FORBIDDEN', 'Only a super admin can change admin account details.')
+      : undefined,
+  );
+
 router.use(authenticate);
 router.get('/', asyncHandler(controller.getMe));
-router.patch('/', validate({ body: updateMeBody }), asyncHandler(controller.updateMe));
+router.patch('/', canEditOwnAccount, validate({ body: updateMeBody }), asyncHandler(controller.updateMe));
 // Change or add a phone number: a code goes to the new number first
-router.post('/phone/otp', otpRateLimit, validate({ body: phoneOtpBody }), asyncHandler(controller.requestPhoneChange));
+router.post(
+  '/phone/otp',
+  canEditOwnAccount,
+  otpRateLimit,
+  validate({ body: phoneOtpBody }),
+  asyncHandler(controller.requestPhoneChange),
+);
 router.post(
   '/phone/verify',
+  canEditOwnAccount,
   authRateLimit('phone-verify'),
   validate({ body: phoneVerifyBody }),
   asyncHandler(controller.verifyPhoneChange),

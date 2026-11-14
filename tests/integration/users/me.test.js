@@ -47,6 +47,29 @@ describe('authenticate', () => {
   });
 });
 
+describe('admins editing their own account', () => {
+  it.each(['support', 'finance', 'dispatch', 'onboarding'])('a %s admin gets 403', async (adminRole) => {
+    const user = await createUser({ role: 'admin', adminRole, phone: null });
+    const header = bearer(user);
+    const patch = await request(app).patch('/api/v1/me').set('Authorization', header).send({ firstName: 'New' });
+    expect(patch.status).toBe(403);
+    const otp = await request(app)
+      .post('/api/v1/me/phone/otp')
+      .set('Authorization', header)
+      .send({ phone: '08031234567' });
+    expect(otp.status).toBe(403);
+    expect((await user.reload()).firstName).not.toBe('New');
+    expect((await request(app).get('/api/v1/me').set('Authorization', header)).status).toBe(200);
+  });
+
+  it('a super admin can', async () => {
+    const user = await createUser({ role: 'admin', adminRole: 'super_admin', phone: null });
+    const res = await request(app).patch('/api/v1/me').set('Authorization', bearer(user)).send({ firstName: 'Boss' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.firstName).toBe('Boss');
+  });
+});
+
 describe('GET /me', () => {
   it('returns a customer', async () => {
     const user = await createUser({ firstName: 'Ada', lastName: 'Okafor' });
