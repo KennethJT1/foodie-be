@@ -11,6 +11,7 @@ import { loadOpenApiSpec } from './config/openapi.js';
 import { errorHandler, generalRateLimit, isHealthCheck, notFound, requestId } from './core/middlewares/index.js';
 import { BOARD_PATH, queueBoard } from './modules/admin/queueBoard.js';
 import healthRoutes from './modules/health/health.routes.js';
+import { home } from './modules/home/home.routes.js';
 import apiRoutes from './routes.js';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use(
 );
 app.use(generalRateLimit);
 
+app.get('/', home);
 app.use('/health', healthRoutes);
 
 const openApiSpec = loadOpenApiSpec();

@@ -66,3 +66,18 @@ describe('Swagger', () => {
     expect(res.body.paths).toHaveProperty(['/auth/register']);
   });
 });
+
+describe('GET / (landing page)', () => {
+  it('serves an HTML page to browsers', async () => {
+    const res = await request(app).get('/').set('Accept', 'text/html,application/xhtml+xml');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    expect(res.text).toContain('Welcome to <span>KJT Foodie</span>');
+  });
+
+  it('returns a JSON summary to API clients', async () => {
+    const res = await request(app).get('/');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ message: 'Welcome to KJT Foodie', about: expect.any(String) });
+  });
+});
